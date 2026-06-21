@@ -1,0 +1,201 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-surface: var(--surface);
+  --color-cyan-accent: var(--accent-cyan);
+  --color-violet-accent: var(--accent-violet);
+  --color-green-accent: var(--accent-green);
+  --color-amber-accent: var(--accent-amber);
+
+  --font-display: "Cormorant Garamond", "Cormorant", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* SUNSET — light default, classy, government-grade */
+:root {
+  --radius: 0.5rem;
+
+  --background: #ffffff;       /* white */
+  --surface: #fff7f4;          /* warm off-white */
+  --card: #ffffff;
+  --card-foreground: #2b1d18;
+  --popover: #ffffff;
+  --popover-foreground: #2b1d18;
+  --foreground: #2b1d18;
+
+  --primary: #E29578;          /* terracotta */
+  --primary-foreground: #ffffff;
+  --secondary: #FFDDD2;        /* blush */
+  --secondary-foreground: #2b1d18;
+  --muted: #FFDDD2;
+  --muted-foreground: #6b5147;
+  --accent: #83C5BE;           /* teal */
+  --accent-foreground: #1b2e2c;
+  --destructive: #b23a2a;
+  --destructive-foreground: #ffffff;
+  --border: #f1d7cd;
+  --input: #f1d7cd;
+  --ring: #E29578;
+
+  /* Aliased accent palette */
+  --accent-cyan: #83C5BE;      /* teal (primary accent) */
+  --accent-violet: #E29578;    /* terracotta */
+  --accent-green: #83C5BE;     /* teal */
+  --accent-amber: #FFDDD2;     /* blush */
+
+  --paper-tint: #FFDDD2;
+  --shadow-elegant: 0 1px 2px rgba(43,29,24,0.05), 0 8px 24px -12px rgba(226,149,120,0.22);
+  --shadow-soft: 0 1px 2px rgba(43,29,24,0.04), 0 4px 14px -8px rgba(43,29,24,0.10);
+}
+
+.dark {
+  --background: #1a0f0c;
+  --surface: #221612;
+  --card: #2b1c17;
+  --card-foreground: #f4dfc4;
+  --popover: #2b1c17;
+  --popover-foreground: #f4dfc4;
+  --foreground: #f4dfc4;
+  --primary: #efa3a0;
+  --primary-foreground: #1a0f0c;
+  --secondary: #3a2620;
+  --secondary-foreground: #f4dfc4;
+  --muted: #2b1c17;
+  --muted-foreground: #c4a489;
+  --accent: #8b597b;
+  --accent-foreground: #f4dfc4;
+  --border: #3a2620;
+  --input: #3a2620;
+  --ring: #efa3a0;
+
+  --accent-cyan: #efa3a0;
+  --accent-violet: #c5a3bb;
+  --accent-green: #a9b598;
+  --accent-amber: #e0a98e;
+
+  --paper-tint: #2b1c17;
+  --shadow-elegant: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 4px 14px -8px rgba(0,0,0,0.4);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    transition: background-color 250ms ease, color 250ms ease;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    font-weight: 500;
+  }
+}
+
+@utility font-display { font-family: var(--font-display); }
+@utility font-mono-data { font-family: var(--font-mono); }
+@utility font-serif-italic {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Subtle paper-grain background — gives a printed, archival feel */
+@utility paper {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(at 20% 10%, color-mix(in oklab, #FFDDD2 55%, transparent) 0px, transparent 50%),
+    radial-gradient(at 80% 0%,  color-mix(in oklab, #E29578 22%, transparent) 0px, transparent 50%),
+    radial-gradient(at 90% 90%, color-mix(in oklab, #83C5BE 20%, transparent) 0px, transparent 50%);
+}
+
+@utility paper-grain {
+  position: relative;
+}
+
+.paper-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.29  0 0 0 0 0.19  0 0 0 0 0.16  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+@utility glass {
+  background: color-mix(in oklab, var(--card) 78%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+@utility dot-grid {
+  background-image: radial-gradient(circle, color-mix(in oklab, var(--primary) 14%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Decorative thin rule with center diamond — used to break sections */
+@utility ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: color-mix(in oklab, var(--primary) 60%, transparent);
+}
+
+.ornament::before,
+.ornament::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--primary) 35%, transparent), transparent);
+}
+
+@keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+.cursor-blink::after {
+  content: "▋";
+  margin-left: 2px;
+  animation: blink 1s steps(1) infinite;
+  color: var(--primary);
+}
+
+@keyframes float-y {
+  0%,100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50%     { transform: translateY(-12px) rotate(var(--r, 0deg)); }
+}
+.float-slow { animation: float-y 9s ease-in-out infinite; }
