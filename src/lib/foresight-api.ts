@@ -45,8 +45,15 @@ Discuss why the retrieved analogies are relevant.`;
 }
 
 function getRequestSupabase(accessToken: string) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  // Works in both Vite (import.meta.env) and Node/serverless (process.env).
+  // This module is only ever imported server-side (via the /api functions),
+  // so process.env is the canonical source at runtime.
+  const env = (typeof process !== "undefined" && process.env) || {};
+  const metaEnv =
+    typeof import.meta !== "undefined" && (import.meta as any).env ? (import.meta as any).env : {};
+
+  const supabaseUrl = env.VITE_SUPABASE_URL ?? metaEnv.VITE_SUPABASE_URL;
+  const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY ?? metaEnv.VITE_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase env vars. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env");

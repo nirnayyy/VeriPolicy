@@ -1,0 +1,26 @@
+# Netlify static SPA deployment.
+#
+# Note: the 5 Groq/NewsData serverless functions in /api are written in the
+# Vercel web-standard (Request/Response default export) format. Netlify
+# Functions require @netlify/functions adapters, so on Netlify those endpoints
+# will not run out of the box. All SPA routes (auth, dashboard, tracker UI,
+# simulator UI) work fully as a static deploy. Deploy the functions on Vercel
+# for the full AI feature set.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback: serve index.html for any client-side route so deep links and
+# refreshes work (e.g. /tracker, /simulator, /profile).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Prevent the SPA fallback from shadowing the api/ directory if you later add
+# Netlify Functions there.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

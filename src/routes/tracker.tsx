@@ -199,7 +199,7 @@ function TrackerPage() {
     setIsGeneratingBrief(true);
 
     try {
-      const response = await fetch("/generate-impact-brief", {
+      const response = await fetch("/api/generate-impact-brief", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ policyId: policy.id }),

@@ -28,7 +28,7 @@ export async function generateForesightMemo(userScenario: string): Promise<Fores
   console.log("Retrieved Analogies:", relevantAnalogies);
   console.log("Similarity Scores:", relevantAnalogies.map((analogy) => analogy.similarity));
 
-  const response = await fetch("/foresight", {
+  const response = await fetch("/api/foresight", {
     method: "POST",
     headers,
     body: JSON.stringify({ userScenario, relevantAnalogies }),
@@ -51,7 +51,7 @@ export type SimulationHistoryItem = {
 
 export async function fetchSimulationHistory(): Promise<SimulationHistoryItem[]> {
   const headers = await createAuthorizedHeaders();
-  const response = await fetch("/simulation-history", {
+  const response = await fetch("/api/simulation-history", {
     method: "GET",
     headers,
   });

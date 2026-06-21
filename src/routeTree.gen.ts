@@ -16,7 +16,6 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
-import { Route as ForesightRouteImport } from './routes/foresight'
 import { Route as ComparisonRouteImport } from './routes/comparison'
 import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as AboutRouteImport } from './routes/about'
@@ -57,11 +56,6 @@ const HomeRoute = HomeRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ForesightRoute = ForesightRouteImport.update({
-  id: '/foresight',
-  path: '/foresight',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ComparisonRoute = ComparisonRouteImport.update({
   id: '/comparison',
   path: '/comparison',
@@ -88,7 +82,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth-callback': typeof AuthCallbackRoute
   '/comparison': typeof ComparisonRoute
-  '/foresight': typeof ForesightRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
@@ -102,7 +95,6 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth-callback': typeof AuthCallbackRoute
   '/comparison': typeof ComparisonRoute
-  '/foresight': typeof ForesightRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
@@ -117,7 +109,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth-callback': typeof AuthCallbackRoute
   '/comparison': typeof ComparisonRoute
-  '/foresight': typeof ForesightRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
@@ -133,7 +124,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth-callback'
     | '/comparison'
-    | '/foresight'
     | '/home'
     | '/login'
     | '/profile'
@@ -147,7 +137,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth-callback'
     | '/comparison'
-    | '/foresight'
     | '/home'
     | '/login'
     | '/profile'
@@ -161,7 +150,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth-callback'
     | '/comparison'
-    | '/foresight'
     | '/home'
     | '/login'
     | '/profile'
@@ -176,7 +164,6 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ComparisonRoute: typeof ComparisonRoute
-  ForesightRoute: typeof ForesightRoute
   HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
@@ -237,13 +224,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/foresight': {
-      id: '/foresight'
-      path: '/foresight'
-      fullPath: '/foresight'
-      preLoaderRoute: typeof ForesightRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/comparison': {
       id: '/comparison'
       path: '/comparison'
@@ -280,7 +260,6 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ComparisonRoute: ComparisonRoute,
-  ForesightRoute: ForesightRoute,
   HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
@@ -292,13 +271,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
