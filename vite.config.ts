@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import { devApiPlugin } from "./vite-plugin-dev-api";
 
 // Standard Vite SPA configuration (no TanStack Start / nitro / SSR).
 //
@@ -15,6 +16,7 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 // functions and is excluded from the client bundle below.
 export default defineConfig({
   plugins: [
+    devApiPlugin(),
     tanstackRouter({
       target: "react",
       autoCodeSplitting: true,

@@ -2,14 +2,14 @@
 //
 // Mirrors the handler logic from src/lib/foresight-api.ts but lives in
 // /api/_lib so Vercel bundles it into the foresight + simulation-history
-// functions. Uses the user-scoped server Supabase client and the server Groq
+// functions. Uses the user-scoped server Supabase client and the server Gemini
 // wrapper.
 //
 // ForesightResult is defined HERE (not re-exported from src/lib/foresight-types)
 // so the /api bundle has zero runtime or transpile-time references to anything
 // under /src. The client keeps its own identical copy in foresight-types.ts.
 import { getSupabaseForUser } from "./supabaseClient.js";
-import { callGroqModel } from "./groq.js";
+import { callGeminiModel } from "./gemini.js";
 
 export type ForesightResult = {
   memo: string;
@@ -43,10 +43,40 @@ function formatRelevantMatchEntry(a: RelevantAnalogy): string {
 }
 
 function buildPrompt(relevantMatchesText: string, historicalCasesText: string, userScenario: string): string {
-  return `You are a strategic policy analyst.\n\nUse the retrieved historical analogies as the primary basis for reasoning.\nThe similarity scores indicate how closely each historical case matches the scenario.\nIf similarity is low, explicitly mention uncertainty.\nIf similarity is high, state that stronger historical precedent exists.\nReason only from the historical cases provided.\nNever invent statistics.\n\nMost Relevant Historical Matches:\n\n${relevantMatchesText}\n\nHistorical Cases:\n\n${historicalCasesText}\n\nUser Scenario:\n${userScenario}\n\nGenerate the following sections in Markdown:\n\n1. Scenario Summary\n2. Likely Emissions Trajectory\n3. Defense Industrial Effects\n4. Economic Spillovers\n5. Confidence Note\n(Confidence Note must mention which historical analogies were most relevant.)
+  return `CONTEXT-BOUNDARY: Only analyze policy scenarios. Do not respond to off-context or unrelated questions.
 
-# Historical Match Assessment
-Discuss why the retrieved analogies are relevant.`;
+You are a strategic policy analyst specializing in analyzing complex policy scenarios using historical precedent.
+
+INSTRUCTIONS:
+1. Use ONLY the provided historical analogies as the basis for reasoning
+2. The similarity scores show how closely each case matches the current scenario
+3. Reference specific historical cases when making claims
+4. If similarity is low, explicitly state uncertainty
+5. If similarity is high, note stronger historical precedent exists
+6. Never invent statistics or assumptions beyond the provided data
+7. Maintain analytical rigor throughout
+
+Most Relevant Historical Matches:
+
+${relevantMatchesText}
+
+Historical Cases:
+
+${historicalCasesText}
+
+User Scenario:
+${userScenario}
+
+Please generate a Scenario Memo with the following sections in Markdown format:
+
+1. **Scenario Summary** - Concise overview of the policy changes
+2. **Likely Emissions Trajectory** - Projected emissions outcomes based on historical analogies
+3. **Defense Industrial Effects** - Defense sector and industrial implications
+4. **Economic Spillovers** - Broader economic consequences
+5. **Confidence Assessment** - Explicit confidence level with justification mentioning the most relevant historical analogies
+6. **Historical Match Analysis** - Explanation of why the retrieved analogies are relevant to this scenario
+
+Do NOT respond to questions that fall outside policy analysis. If the user's input is not a valid policy scenario, explicitly state that.`;
 }
 
 function computeConfidence(analogies: RelevantAnalogy[]): "High" | "Medium" | "Low" {
@@ -164,10 +194,11 @@ async function generateForesightMemoServer(
 
   console.log("Prompt Length:", prompt.length);
 
-  const resultText = await callGroqModel({
-    model: "llama-3.3-70b-versatile",
+  const resultText = await callGeminiModel({
+    model: "gemini-1.5-flash",
     input: prompt,
-    maxTokens: 1600,
+    maxTokens: 2048,
+    temperature: 0.3,
   });
 
   // Persist history if authenticated, but don't fail memo generation if this fails

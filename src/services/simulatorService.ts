@@ -34,12 +34,20 @@ export async function generateForesightMemo(userScenario: string): Promise<Fores
     body: JSON.stringify({ userScenario, relevantAnalogies }),
   });
 
+  const body = await response.text();
+  const contentType = response.headers.get("content-type") ?? "";
+
   if (!response.ok) {
-    const body = await response.text();
     throw new Error(`Foresight API failed: ${response.status} ${response.statusText} - ${body}`);
   }
 
-  const data = (await response.json()) as ForesightResult;
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      "Foresight API returned HTML instead of JSON. Restart with npm run dev so /api routes are served locally.",
+    );
+  }
+
+  const data = JSON.parse(body) as ForesightResult;
   return data;
 }
 
