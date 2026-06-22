@@ -58,6 +58,37 @@ const AVAILABLE_ANALYTICS_COUNTRIES = [
   "Sweden",
 ] as const;
 
+const POLICY_SCENARIO_KEYWORDS = [
+  "defence",
+  "defense",
+  "climate",
+  "emissions",
+  "renewable",
+  "renewables",
+  "subsidy",
+  "subsidies",
+  "fossil",
+  "budget",
+  "spending",
+  "procurement",
+  "security",
+  "regulation",
+  "tax",
+  "tariff",
+  "green",
+  "infrastructure",
+  "policy",
+  "legislation",
+  "sanction",
+  "trade",
+  "industrial",
+  "energy",
+  "transport",
+  "migration",
+] as const;
+
+const INVALID_POLICY_ERROR = "The scenario entered is not related to policy.";
+
 const COUNTRY_SYNONYMS: Record<string, string> = {
   "united states": "United States",
   "united states of america": "United States",
@@ -87,6 +118,12 @@ function getCountriesFromScenario(scenario: string): string[] {
 
   return [...found];
 }
+
+function isLikelyPolicyScenario(input: string): boolean {
+  const normalized = input.toLowerCase();
+  return POLICY_SCENARIO_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
 type MemoSection = {
   title: string;
   body: string;
@@ -145,6 +182,8 @@ function SimulatorPage() {
     const extracted = getCountriesFromScenario(input);
     return extracted.length > 0 ? extracted : [...AVAILABLE_ANALYTICS_COUNTRIES];
   }, [input]);
+
+  const isInvalidPolicyError = error === INVALID_POLICY_ERROR;
 
   const displayedCountries = useMemo(() => {
     if (state === "done" && historicalMatches.length > 0) {
@@ -241,6 +280,15 @@ function SimulatorPage() {
 
   const generate = async () => {
     if (!input.trim()) return;
+    if (!isLikelyPolicyScenario(input)) {
+      setError(INVALID_POLICY_ERROR);
+      setState("idle");
+      setMarkdown(null);
+      setHistoricalMatches([]);
+      setConfidence(null);
+      return;
+    }
+
     console.log("TEXTAREA VALUE", input);
     console.log("STATE VALUE", input);
     setError(null);
@@ -406,7 +454,7 @@ function SimulatorPage() {
             {state === "done" && (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                 <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-                  <Card className="border-border bg-card p-0 overflow-hidden shadow-lg">
+                  <Card className="order-2 lg:order-1 border-border bg-card p-0 overflow-hidden shadow-lg">
                     <Accordion type="single" collapsible defaultValue="analytics">
                       <AccordionItem value="analytics">
                         <AccordionTrigger className="bg-background/90 px-6 py-4 text-left text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">
@@ -443,7 +491,7 @@ function SimulatorPage() {
                     </Accordion>
                   </Card>
 
-                  <Card className="border-border bg-card p-0 overflow-hidden shadow-lg">
+                  <Card className="order-1 lg:order-2 border-border bg-card p-0 overflow-hidden shadow-lg">
                     <Accordion type="single" collapsible defaultValue="memo">
                       <AccordionItem value="memo">
                         <AccordionTrigger className="bg-background/90 px-6 py-4 text-left text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">
@@ -534,8 +582,14 @@ function SimulatorPage() {
 
             {error && (
               <Card className="border-border bg-red-50 p-4 text-red-700">
-                <div className="font-semibold">Error</div>
-                <div>{error}</div>
+                {isInvalidPolicyError ? (
+                  <div>{INVALID_POLICY_ERROR}</div>
+                ) : (
+                  <>
+                    <div className="font-semibold">Error</div>
+                    <div>{error}</div>
+                  </>
+                )}
               </Card>
             )}
           </div>
