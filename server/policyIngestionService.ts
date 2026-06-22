@@ -50,7 +50,7 @@ async function fetchFromNewsData(): Promise<any[]> {
   if (!KEY) throw new Error("NEWSDATA_API_KEY not set in environment");
 
   const now = new Date();
-  const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const start = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
   const results: any[] = [];
   const pageSize = 100;
 
@@ -73,13 +73,13 @@ async function fetchFromNewsData(): Promise<any[]> {
     results.push(...pageResults);
   }
 
-  // filter to last 7 days (some APIs don't support from_date for this endpoint)
+  // filter to last 5 days (some APIs don't support from_date for this endpoint)
   const cutoff = start.getTime();
   return results.filter((r) => {
     const d = r.pubDate || r.pubDateUtc || r.date || r.pub_date || null;
-    if (!d) return true; // keep if no date
+    if (!d) return false;
     const ts = Date.parse(d);
-    if (Number.isNaN(ts)) return true;
+    if (Number.isNaN(ts)) return false;
     return ts >= cutoff;
   });
 }
@@ -135,6 +135,17 @@ export async function ingestPoliciesFromNewsData(): Promise<{
       throw error;
     }
     inserted = Array.isArray(data) ? data.length : 0;
+  }
+
+  // Remove older policy feed items beyond 5 days to keep the feed fresh.
+  const cleanupCutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+  const { error: cleanupError } = await supabase
+    .from("policy_feed")
+    .delete()
+    .or(`published_date.lt.${cleanupCutoff},and(published_date.is.null,created_at.lt.${cleanupCutoff})`);
+
+  if (cleanupError) {
+    console.error("policyIngestion: cleanup error", cleanupError);
   }
 
   const skipped = urls.length - inserted;

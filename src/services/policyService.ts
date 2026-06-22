@@ -8,9 +8,11 @@ type PolicyUpdate = Partial<NewPolicy>;
 export async function getPolicies(): Promise<PolicyFeed[]> {
   try {
     const supabase = getSupabase();
+    const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from("policy_feed")
       .select("*")
+      .or(`published_date.gte.${cutoff},and(published_date.is.null,created_at.gte.${cutoff})`)
       .order("published_date", { ascending: false });
 
     // Debugging logs: returned rows count and rows
