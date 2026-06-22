@@ -32,7 +32,7 @@ type GeminiResponse = {
 };
 
 export async function callGeminiModel({
-  model = "gemini-1.5-flash",
+  model = "gemini-1.5-flash-latest",
   input,
   maxTokens = 2048,
   temperature = 0.3,

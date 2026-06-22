@@ -195,7 +195,7 @@ async function generateForesightMemoServer(
   console.log("Prompt Length:", prompt.length);
 
   const resultText = await callGeminiModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-latest",
     input: prompt,
     maxTokens: 2048,
     temperature: 0.3,
