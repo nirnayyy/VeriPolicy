@@ -77,7 +77,7 @@ export type PolicyImpactBrief = {
 
 export type PolicyFeed = {
   id: string;
-  title: string;
+  title: string | null;
   summary: string | null;
   content: Record<string, unknown> | null;
   source: string | null;
@@ -88,6 +88,14 @@ export type PolicyFeed = {
   impact_brief: PolicyImpactBrief | null;
   created_at: string;
   updated_at: string | null;
+};
+
+export type SimulationHistory = {
+  id: string;
+  user_id: string;
+  scenario: string;
+  memo: string;
+  created_at: string;
 };
 
 export type HistoricalAnalogy = {
@@ -157,6 +165,14 @@ export type Database = {
         Row: HistoricalAnalogy;
         Insert: Omit<HistoricalAnalogy, "id" | "created_at"> & { id?: string; created_at?: string };
         Update: Partial<HistoricalAnalogy>;
+      };
+      simulation_history: {
+        Row: SimulationHistory;
+        Insert: Omit<SimulationHistory, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<SimulationHistory>;
       };
     };
   };
