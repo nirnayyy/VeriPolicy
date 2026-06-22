@@ -44,23 +44,29 @@ export async function callGeminiModel({
 }): Promise<string> {
   const apiKey = getApiKey();
 
+  const systemPrompt = `You are a strategic policy analyst with expertise in defense, emissions, economic policy, and industrial effects. 
+
+CONTEXT-BOUNDARY: Only analyze policy scenarios. Do not respond to off-context or unrelated questions.
+
+Instructions:
+1. Use ONLY the provided historical analogies as the basis for reasoning
+2. Reference specific historical cases when making claims
+3. If similarity is low, explicitly state uncertainty
+4. If similarity is high, note stronger historical precedent exists
+5. Never invent statistics or assumptions beyond the provided data
+6. Maintain analytical rigor throughout
+7. If the input is not a valid policy scenario, explicitly state that and refuse to continue
+
+Respond with a structured Scenario Memo in Markdown format.`;
+
   const contents: GeminiContent[] = [
     {
       role: "user",
-      parts: [{ text: input }],
+      parts: [{ text: `${systemPrompt}\n\n${input}` }],
     },
   ];
 
-  const systemInstruction = {
-    parts: [
-      {
-        text: "You are a strategic policy analyst with expertise in defense, emissions, economic policy, and industrial effects. You analyze policy scenarios using historical precedent and provide structured, evidence-based foresight memos. You avoid speculation beyond the provided historical cases. You maintain analytical rigor and acknowledge uncertainty when similarity scores are low.",
-      },
-    ],
-  };
-
   const payload = {
-    system: systemInstruction,
     contents,
     generationConfig: {
       maxOutputTokens: maxTokens,
@@ -69,12 +75,10 @@ export async function callGeminiModel({
       topK: 40,
     },
     safetySettings: [
-      { category: "HARM_CATEGORY_UNSPECIFIED", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_DEROGATORY_CONTENT", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_VIOLENCE", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_SEXUAL_CONTENT", threshold: "BLOCK_NONE" },
-      { category: "HARM_CATEGORY_MEDICAL_CONTENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
     ],
   };
 
