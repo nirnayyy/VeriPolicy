@@ -1,9 +1,12 @@
 /*
-  Groq client wrapper.
-  Uses the GROQ API via simple fetch so the code works even if the SDK differs.
-  Exports a typed helper to call Groq's OpenAI-compatible Chat Completions endpoint.
+  Groq client wrapper (server-only).
 
-  NOTE: Ensure `GROQ_API_KEY` is set in your environment (e.g., .env.local) before running.
+  Uses Groq's OpenAI-compatible Chat Completions endpoint via plain fetch so
+  there is no SDK dependency to bundle. Lives inside /api/_lib so the Vercel
+  serverless functions can resolve it; it must NOT be imported by the client
+  SPA (the GROQ_API_KEY secret is only available server-side).
+
+  NOTE: Ensure `GROQ_API_KEY` is set in your Vercel project env before deploying.
 */
 
 const GROQ_API_BASE = "https://api.groq.com/openai/v1";
@@ -22,7 +25,11 @@ type GroqResponse = {
   }>;
 };
 
-export async function callGroqModel({ model, input, maxTokens = 1024 }: {
+export async function callGroqModel({
+  model,
+  input,
+  maxTokens = 1024,
+}: {
   model: string;
   input: string;
   maxTokens?: number;
@@ -62,5 +69,3 @@ export async function callGroqModel({ model, input, maxTokens = 1024 }: {
 
   throw new Error("Groq API returned an unexpected response shape");
 }
-
-export default { callGroqModel };

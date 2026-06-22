@@ -1,5 +1,10 @@
-import { getSupabase } from "@/lib/supabase/client";
-import { generateImpactBrief, parseStoredImpactBrief, storeImpactBriefToDb } from "@/services/impactBriefService";
+// Server-only backfill handler.
+//
+// Mirrors the handler from src/lib/generate-all-impact-briefs-api.ts but lives
+// in /api/_lib so Vercel bundles it into the generate-all-impact-briefs
+// function.
+import { getSupabase } from "./supabaseClient";
+import { generateImpactBrief, parseStoredImpactBrief, storeImpactBriefToDb } from "./impactBriefService";
 
 export async function handleGenerateAllImpactBriefsRequest(request: Request): Promise<Response> {
   if (request.method !== "POST") {
@@ -16,7 +21,10 @@ export async function handleGenerateAllImpactBriefsRequest(request: Request): Pr
 
     if (selErr) throw selErr;
     if (!rows || rows.length === 0) {
-      return new Response(JSON.stringify({ processed: 0, failed: 0 }), { status: 200, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ processed: 0, failed: 0 }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     // Filter rows that need generation: missing or invalid impact_brief content
@@ -26,10 +34,18 @@ export async function handleGenerateAllImpactBriefsRequest(request: Request): Pr
 
     if (candidates.length === 0) {
       console.log(`Found 0 candidates out of ${rows.length} rows`);
-      return new Response(JSON.stringify({ processed: 0, failed: 0, totalCandidates: 0, totalRows: rows.length }), { status: 200, headers: { "content-type": "application/json" } });
+      return new Response(
+        JSON.stringify({ processed: 0, failed: 0, totalCandidates: 0, totalRows: rows.length }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
     }
 
-    console.log(`Found ${candidates.length} candidates out of ${rows.length} rows: ${candidates.slice(0,20).map((r:any)=>r.id).join(',')}`);
+    console.log(
+      `Found ${candidates.length} candidates out of ${rows.length} rows: ${candidates
+        .slice(0, 20)
+        .map((r: any) => r.id)
+        .join(",")}`,
+    );
 
     const total = candidates.length;
     let processed = 0;
@@ -41,7 +57,12 @@ export async function handleGenerateAllImpactBriefsRequest(request: Request): Pr
       const policyId = row.id;
 
       // Re-fetch the current impact_brief for this id to avoid duplicate generation
-      const { data: currentRow, error: curErr } = await supabase.from("policy_feed").select("impact_brief").eq("id", policyId).limit(1).maybeSingle();
+      const { data: currentRow, error: curErr } = await supabase
+        .from("policy_feed")
+        .select("impact_brief")
+        .eq("id", policyId)
+        .limit(1)
+        .maybeSingle();
       if (curErr) {
         console.error(`Failed to re-check policy ${policyId}:`, curErr);
         failed += 1;
@@ -76,11 +97,15 @@ export async function handleGenerateAllImpactBriefsRequest(request: Request): Pr
       }
     }
 
-    return new Response(JSON.stringify({ processed, failed }), { status: 200, headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify({ processed, failed }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   } catch (err: any) {
     console.error("generate-all-impact-briefs error", err);
-    return new Response(JSON.stringify({ error: err?.message ?? String(err) }), { status: 500, headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify({ error: err?.message ?? String(err) }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
   }
 }
-
-export default { handleGenerateAllImpactBriefsRequest };

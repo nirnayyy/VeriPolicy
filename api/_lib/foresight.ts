@@ -1,14 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
+// Server-only foresight handler.
+//
+// Mirrors the handler logic from src/lib/foresight-api.ts but lives in
+// /api/_lib so Vercel bundles it into the foresight + simulation-history
+// functions. Uses the user-scoped server Supabase client and the server Groq
+// wrapper. The result type is shared with the client via foresight-types
+// (type-only import, erased at build).
+import { getSupabaseForUser } from "./supabaseClient";
 import { callGroqModel } from "./groq";
-import type { Database } from "./supabase/types";
+import type { ForesightResult } from "../../src/lib/foresight-types";
 
-export type ForesightResult = {
-  memo: string;
-  confidence: "High" | "Medium" | "Low";
-  historicalMatches: { country: string; period: string; similarity: number }[];
-};
+export type { ForesightResult } from "../../src/lib/foresight-types";
 
-export type RelevantAnalogy = {
+type RelevantAnalogy = {
   country: string;
   period: string;
   defense_trend: string;
@@ -30,11 +33,7 @@ function formatAnalogy(a: RelevantAnalogy): string {
 }
 
 function formatRelevantMatchEntry(a: RelevantAnalogy): string {
-  return [
-    `Country: ${a.country}`,
-    `Period: ${a.period}`,
-    `Similarity Score: ${a.similarity}`,
-  ].join("\n");
+  return [`Country: ${a.country}`, `Period: ${a.period}`, `Similarity Score: ${a.similarity}`].join("\n");
 }
 
 function buildPrompt(relevantMatchesText: string, historicalCasesText: string, userScenario: string): string {
@@ -42,34 +41,6 @@ function buildPrompt(relevantMatchesText: string, historicalCasesText: string, u
 
 # Historical Match Assessment
 Discuss why the retrieved analogies are relevant.`;
-}
-
-function getRequestSupabase(accessToken: string) {
-  // Works in both Vite (import.meta.env) and Node/serverless (process.env).
-  // This module is only ever imported server-side (via the /api functions),
-  // so process.env is the canonical source at runtime.
-  const env = (typeof process !== "undefined" && process.env) || {};
-  const metaEnv =
-    typeof import.meta !== "undefined" && (import.meta as any).env ? (import.meta as any).env : {};
-
-  const supabaseUrl = env.VITE_SUPABASE_URL ?? metaEnv.VITE_SUPABASE_URL;
-  const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY ?? metaEnv.VITE_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase env vars. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env");
-  }
-
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  });
 }
 
 function computeConfidence(analogies: RelevantAnalogy[]): "High" | "Medium" | "Low" {
@@ -83,7 +54,7 @@ function computeConfidence(analogies: RelevantAnalogy[]): "High" | "Medium" | "L
   return "Low";
 }
 
-async function getUserIdFromToken(supabase: ReturnType<typeof getRequestSupabase>) {
+async function getUserIdFromToken(supabase: ReturnType<typeof getSupabaseForUser>) {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
     throw new Error(`Unable to resolve user from Supabase token: ${error?.message ?? "unknown error"}`);
@@ -125,10 +96,10 @@ function normalizeRelevantAnalogies(input: unknown): RelevantAnalogy[] {
 }
 
 async function persistSimulationHistory(
-  supabase: ReturnType<typeof getRequestSupabase>,
+  supabase: ReturnType<typeof getSupabaseForUser>,
   userId: string | null,
   userScenario: string,
-  memo: string
+  memo: string,
 ) {
   // Skip history save if no user is authenticated
   if (!userId) {
@@ -143,9 +114,7 @@ async function persistSimulationHistory(
     memo: memo.substring(0, 50) + "...",
   });
 
-  const { error } = await supabase
-    .from("simulation_history")
-    .insert(insertPayload);
+  const { error } = await supabase.from("simulation_history").insert(insertPayload);
 
   if (error) {
     console.error("Failed to save simulation history:", error.message);
@@ -170,8 +139,8 @@ async function generateForesightMemoServer(
     throw new Error("No relevant historical analogies were provided to ground the analysis.");
   }
 
-  const supabase = getRequestSupabase(accessToken);
-  
+  const supabase = getSupabaseForUser(accessToken);
+
   // Attempt to get user, but don't fail memo generation if auth fails
   let userId: string | null = null;
   try {
@@ -290,7 +259,7 @@ export async function handleSimulationHistoryRequest(request: Request): Promise<
   }
 
   try {
-    const supabase = getRequestSupabase(accessToken);
+    const supabase = getSupabaseForUser(accessToken);
     const userId = await getUserIdFromToken(supabase);
 
     const { data, error } = await supabase

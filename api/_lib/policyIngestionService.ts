@@ -1,5 +1,10 @@
-import { getSupabase } from "@/lib/supabase/client";
-import type { PolicyFeed } from "@/lib/supabase/types";
+// Server-only policy ingestion service.
+//
+// Mirrors src/services/policyIngestionService.ts but lives in /api/_lib so
+// Vercel bundles it into the policy-sync function. The client SPA does not
+// import this module. Uses the server Supabase client (no user session).
+import { getSupabase } from "./supabaseClient";
+import type { PolicyFeed } from "./types";
 
 const KEY = process.env.NEWSDATA_API_KEY || process.env.VITE_NEWSDATA_API_KEY || "";
 
@@ -79,7 +84,11 @@ async function fetchFromNewsData(): Promise<any[]> {
   });
 }
 
-export async function ingestPoliciesFromNewsData(): Promise<{ inserted: number; skipped: number; totalFetched: number }> {
+export async function ingestPoliciesFromNewsData(): Promise<{
+  inserted: number;
+  skipped: number;
+  totalFetched: number;
+}> {
   const articles = (await fetchFromNewsData()) || [];
   const totalFetched = Array.isArray(articles) ? articles.length : 0;
 
@@ -132,5 +141,3 @@ export async function ingestPoliciesFromNewsData(): Promise<{ inserted: number; 
 
   return { inserted, skipped, totalFetched };
 }
-
-export default { ingestPoliciesFromNewsData };

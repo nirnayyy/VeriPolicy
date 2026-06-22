@@ -1,5 +1,12 @@
-import { getSupabase } from "@/lib/supabase/client";
-import { callGroqModel } from "@/lib/groq";
+// Server-only policy impact-brief generator.
+//
+// Mirrors src/services/impactBriefService.ts but lives in /api/_lib so Vercel
+// bundles it into each function. Uses the server Supabase client (no user
+// session) and the server Groq wrapper. The client SPA keeps its own copy of
+// the type helpers it needs; this module is only ever imported by the
+// /api/* serverless functions.
+import { getSupabase } from "./supabaseClient";
+import { callGroqModel } from "./groq";
 
 export type ImpactBriefResult = {
   impact_brief: string;
@@ -159,7 +166,12 @@ export function parseStoredImpactBrief(value: unknown): ImpactBriefResult | null
 // Keep legacy helpers for reading/storing brief in DB
 export async function getImpactBriefFromDb(policyId: string) {
   const supabase = getSupabase();
-  const { data, error } = await supabase.from("policy_feed").select("impact_brief").eq("id", policyId).limit(1).maybeSingle();
+  const { data, error } = await supabase
+    .from("policy_feed")
+    .select("impact_brief")
+    .eq("id", policyId)
+    .limit(1)
+    .maybeSingle();
   if (error) throw error;
   return parseStoredImpactBrief(data?.impact_brief) ?? null;
 }
@@ -170,5 +182,3 @@ export async function storeImpactBriefToDb(policyId: string, brief: ImpactBriefR
   if (error) throw error;
   return brief;
 }
-
-export default { generateImpactBrief, getImpactBriefFromDb, storeImpactBriefToDb };

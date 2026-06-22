@@ -1,4 +1,8 @@
-import { ingestPoliciesFromNewsData } from "@/services/policyIngestionService";
+// Server-only policy-sync handler.
+//
+// Mirrors the handler from src/lib/policy-sync-api.ts but lives in /api/_lib
+// so Vercel bundles it into the policy-sync function.
+import { ingestPoliciesFromNewsData } from "./policyIngestionService";
 
 export async function handlePolicySyncRequest(request: Request): Promise<Response> {
   if (request.method !== "POST") {
@@ -19,5 +23,3 @@ export async function handlePolicySyncRequest(request: Request): Promise<Respons
     });
   }
 }
-
-export default { handlePolicySyncRequest };

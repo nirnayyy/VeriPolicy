@@ -1,4 +1,4 @@
-import type { ForesightResult } from "../lib/foresight-api";
+import type { ForesightResult } from "../lib/foresight-types";
 import { findRelevantAnalogies } from "./retrievalService";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase/client";
 
