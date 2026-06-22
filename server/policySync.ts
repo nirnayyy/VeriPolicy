@@ -5,7 +5,7 @@
 import { ingestPoliciesFromNewsData } from "./policyIngestionService.js";
 
 export async function handlePolicySyncRequest(request: Request): Promise<Response> {
-  if (request.method !== "POST") {
+  if (request.method !== "POST" && request.method !== "GET") {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
