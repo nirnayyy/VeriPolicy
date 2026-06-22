@@ -3,13 +3,19 @@
 // Mirrors the handler logic from src/lib/foresight-api.ts but lives in
 // /api/_lib so Vercel bundles it into the foresight + simulation-history
 // functions. Uses the user-scoped server Supabase client and the server Groq
-// wrapper. The result type is shared with the client via foresight-types
-// (type-only import, erased at build).
+// wrapper.
+//
+// ForesightResult is defined HERE (not re-exported from src/lib/foresight-types)
+// so the /api bundle has zero runtime or transpile-time references to anything
+// under /src. The client keeps its own identical copy in foresight-types.ts.
 import { getSupabaseForUser } from "./supabaseClient";
 import { callGroqModel } from "./groq";
-import type { ForesightResult } from "../../src/lib/foresight-types";
 
-export type { ForesightResult } from "../../src/lib/foresight-types";
+export type ForesightResult = {
+  memo: string;
+  confidence: "High" | "Medium" | "Low";
+  historicalMatches: { country: string; period: string; similarity: number }[];
+};
 
 type RelevantAnalogy = {
   country: string;
