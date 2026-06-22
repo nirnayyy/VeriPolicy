@@ -3,8 +3,8 @@
 // Mirrors the handler from src/lib/generate-all-impact-briefs-api.ts but lives
 // in /api/_lib so Vercel bundles it into the generate-all-impact-briefs
 // function.
-import { getSupabase } from "./supabaseClient";
-import { generateImpactBrief, parseStoredImpactBrief, storeImpactBriefToDb } from "./impactBriefService";
+import { getSupabase } from "./supabaseClient.js";
+import { generateImpactBrief, parseStoredImpactBrief, storeImpactBriefToDb } from "./impactBriefService.js";
 
 export async function handleGenerateAllImpactBriefsRequest(request: Request): Promise<Response> {
   if (request.method !== "POST") {

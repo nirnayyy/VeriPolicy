@@ -4,8 +4,8 @@
 // /api/_lib so Vercel bundles it into the generate-impact-brief function.
 // Uses the server Supabase client (no user session) and the server impact
 // brief service.
-import { getSupabase } from "./supabaseClient";
-import { generateImpactBrief, parseStoredImpactBrief, storeImpactBriefToDb } from "./impactBriefService";
+import { getSupabase } from "./supabaseClient.js";
+import { generateImpactBrief, parseStoredImpactBrief, storeImpactBriefToDb } from "./impactBriefService.js";
 
 export async function handleGenerateImpactBriefRequest(request: Request): Promise<Response> {
   if (request.method !== "POST") {

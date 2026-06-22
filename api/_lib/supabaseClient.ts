@@ -8,7 +8,7 @@
 // needs differ and bundling a shared file across the boundary is exactly what
 // breaks in production.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
+import type { Database } from "./types.js";
 
 function resolveEnv(): { url: string; anonKey: string } {
   // process.env is the canonical source in Vercel serverless (the VITE_ prefix

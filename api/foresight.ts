@@ -4,7 +4,7 @@
 // Vercel auto-detects files in /api as Node serverless functions using the
 // web-standard Request/Response signature. All shared server-only code lives
 // in /api/_lib so @vercel/node bundles it into each function.
-import { handleForesightRequest } from "./_lib/foresight";
+import { handleForesightRequest } from "./_lib/foresight.js";
 
 export default async function handler(request: Request): Promise<Response> {
   return handleForesightRequest(request);

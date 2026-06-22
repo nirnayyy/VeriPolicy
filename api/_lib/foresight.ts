@@ -8,8 +8,8 @@
 // ForesightResult is defined HERE (not re-exported from src/lib/foresight-types)
 // so the /api bundle has zero runtime or transpile-time references to anything
 // under /src. The client keeps its own identical copy in foresight-types.ts.
-import { getSupabaseForUser } from "./supabaseClient";
-import { callGroqModel } from "./groq";
+import { getSupabaseForUser } from "./supabaseClient.js";
+import { callGroqModel } from "./groq.js";
 
 export type ForesightResult = {
   memo: string;

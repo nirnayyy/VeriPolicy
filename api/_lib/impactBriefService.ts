@@ -5,8 +5,8 @@
 // session) and the server Groq wrapper. The client SPA keeps its own copy of
 // the type helpers it needs; this module is only ever imported by the
 // /api/* serverless functions.
-import { getSupabase } from "./supabaseClient";
-import { callGroqModel } from "./groq";
+import { getSupabase } from "./supabaseClient.js";
+import { callGroqModel } from "./groq.js";
 
 export type ImpactBriefResult = {
   impact_brief: string;

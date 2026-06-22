@@ -2,7 +2,7 @@
 //
 // Mirrors the handler from src/lib/policy-sync-api.ts but lives in /api/_lib
 // so Vercel bundles it into the policy-sync function.
-import { ingestPoliciesFromNewsData } from "./policyIngestionService";
+import { ingestPoliciesFromNewsData } from "./policyIngestionService.js";
 
 export async function handlePolicySyncRequest(request: Request): Promise<Response> {
   if (request.method !== "POST") {

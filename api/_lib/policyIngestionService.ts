@@ -3,8 +3,8 @@
 // Mirrors src/services/policyIngestionService.ts but lives in /api/_lib so
 // Vercel bundles it into the policy-sync function. The client SPA does not
 // import this module. Uses the server Supabase client (no user session).
-import { getSupabase } from "./supabaseClient";
-import type { PolicyFeed } from "./types";
+import { getSupabase } from "./supabaseClient.js";
+import type { PolicyFeed } from "./types.js";
 
 const KEY = process.env.NEWSDATA_API_KEY || process.env.VITE_NEWSDATA_API_KEY || "";
 
