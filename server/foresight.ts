@@ -10,6 +10,7 @@
 // under /src. The client keeps its own identical copy in foresight-types.ts.
 import { getSupabaseForUser } from "./supabaseClient.js";
 import { callGeminiModel } from "./gemini.js";
+import { callGroqModel } from "./groq.js";
 
 export type ForesightResult = {
   memo: string;
@@ -194,12 +195,36 @@ async function generateForesightMemoServer(
 
   console.log("Prompt Length:", prompt.length);
 
-  const resultText = await callGeminiModel({
-    model: "gemini-2.0-flash",
-    input: prompt,
-    maxTokens: 2048,
-    temperature: 0.3,
-  });
+  let resultText: string;
+  let modelUsed = "gemini-2.0-flash";
+
+  try {
+    // Try Gemini first
+    resultText = await callGeminiModel({
+      model: "gemini-2.0-flash",
+      input: prompt,
+      maxTokens: 2048,
+      temperature: 0.3,
+    });
+    console.log("Memo generated using Gemini API");
+  } catch (geminiError) {
+    console.warn("Gemini API failed, falling back to Groq:", geminiError);
+    modelUsed = "groq-llama3.3-70b-versatile";
+    try {
+      // Fallback to Groq
+      resultText = await callGroqModel({
+        model: "llama-3.3-70b-versatile",
+        input: prompt,
+        maxTokens: 2048,
+      });
+      console.log("Memo generated using Groq API (fallback)");
+    } catch (groqError) {
+      console.error("Both Gemini and Groq API calls failed");
+      throw new Error(
+        `Both memo generation APIs failed. Gemini: ${geminiError}. Groq: ${groqError}`
+      );
+    }
+  }
 
   // Persist history if authenticated, but don't fail memo generation if this fails
   await persistSimulationHistory(supabase, userId, userScenario, resultText);
