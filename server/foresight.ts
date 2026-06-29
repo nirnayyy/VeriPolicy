@@ -44,40 +44,31 @@ function formatRelevantMatchEntry(a: RelevantAnalogy): string {
 }
 
 function buildPrompt(relevantMatchesText: string, historicalCasesText: string, userScenario: string): string {
-  return `CONTEXT-BOUNDARY: Only analyze policy scenarios. Do not respond to off-context or unrelated questions.
+  return `You are a strategic policy analyst. Analyze ONLY policy scenarios. Reject off-topic inputs.
 
-You are a strategic policy analyst specializing in analyzing complex policy scenarios using historical precedent.
+RULES:
+- Ground analysis in the historical analogies below. Scale projections to match the user's specific percentages/numbers.
+- Contrast user inputs against historical baselines (e.g. user says +15% vs historical +5% = 3x acceleration).
+- Be direct and concise. No filler, no preamble, no repetition. Every sentence must add new information.
+- Each section: max 80 words. Total memo: under 500 words.
+- State uncertainty explicitly when similarity is low.
 
-INSTRUCTIONS:
-1. Use the provided historical analogies as the foundational baseline and precedent. However, you MUST scale, contrast, and adjust your projections to reflect the specific percentages, numbers, and scale of the changes defined in the User Scenario.
-2. Parse the specific numbers, percentages, and targets in the User Scenario (e.g. +15% spending, -20% subsidies, 3% GDP) and make these the central focus of your quantitative projections.
-3. Contrast the user's proposed percentages with the historical baseline values (e.g. if the historical case had a +5% change and the user entered +15%, highlight that this represents a threefold acceleration).
-4. Reference specific historical cases to anchor your qualitative analysis, but calculate and project the scaled quantitative effects of the User Scenario.
-5. If similarity is low, explicitly state uncertainty. If similarity is high, note stronger historical precedent exists.
-6. Do not invent unrelated historical facts, but do estimate, scale, and analyze the direct implications of the specific percentages/numbers in the User Scenario relative to the historical baseline.
-7. Maintain analytical rigor throughout.
-
-Most Relevant Historical Matches:
-
+HISTORICAL MATCHES:
 ${relevantMatchesText}
 
-Historical Cases:
-
+HISTORICAL CASES:
 ${historicalCasesText}
 
-User Scenario:
+USER SCENARIO:
 ${userScenario}
 
-Please generate a Scenario Memo with the following sections in Markdown format:
-
-1. **Scenario Summary** - Concise overview of the policy changes, highlighting the specific percentages entered
-2. **Likely Emissions Trajectory** - Projected emissions outcomes, scaled specifically to match the User Scenario's percentage shifts
-3. **Defense Industrial Effects** - Defense sector and industrial implications, detailing the scale of the transition compared to the historical baseline
-4. **Economic Spillovers** - Broader economic consequences, adjusted to the specific budget reallocation percentages
-5. **Confidence Assessment** - Explicit confidence level with justification mentioning the similarity and percentage alignment with historical analogies
-6. **Historical Match Analysis** - Explanation of why the retrieved analogies are relevant to this scenario and how the percentages compare
-
-Do NOT respond to questions that fall outside policy analysis. If the user's input is not a valid policy scenario, explicitly state that.`;
+Generate a memo in Markdown with these sections:
+1. **Scenario Summary** — What changed, with exact percentages.
+2. **Emissions Trajectory** — Projected CO2 impact, scaled to the user's numbers.
+3. **Defence Industrial Effects** — Sector implications at the stated scale.
+4. **Economic Spillovers** — Fiscal/trade consequences of the reallocation.
+5. **Confidence** — High/Medium/Low with one-line justification citing analogy similarity.
+6. **Historical Match Analysis** — Why these analogies apply and how percentages compare.`;
 }
 
 function computeConfidence(analogies: RelevantAnalogy[]): "High" | "Medium" | "Low" {

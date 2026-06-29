@@ -8,31 +8,39 @@ type PolicyUpdate = Partial<NewPolicy>;
 export async function getPolicies(): Promise<PolicyFeed[]> {
   try {
     const supabase = getSupabase();
-    const cutoff = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+    // First try recent policies (last 30 days)
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
       .from("policy_feed")
       .select("*")
       .or(`published_date.gte.${cutoff},and(published_date.is.null,created_at.gte.${cutoff})`)
-      .order("published_date", { ascending: false });
-
-    // Debugging logs: returned rows count and rows
-    try {
-      const rowCount = Array.isArray(data) ? data.length : 0;
-      console.log("getPolicies: Returned Rows Count:", rowCount);
-      console.log("getPolicies: Returned Rows:", data);
-    } catch (logErr) {
-      // swallow logging errors
-      console.error("getPolicies: logging failure", logErr);
-    }
+      .order("published_date", { ascending: false, nullsFirst: false })
+      .limit(50);
 
     if (error) {
       console.error("getPolicies: Supabase Error:", error);
       throw error;
     }
 
+    // If no recent results, fetch the latest 50 regardless of date
+    if (!data || data.length === 0) {
+      const { data: fallback, error: fallbackError } = await supabase
+        .from("policy_feed")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (fallbackError) {
+        console.error("getPolicies fallback: Supabase Error:", fallbackError);
+        throw fallbackError;
+      }
+
+      return (fallback ?? []) as PolicyFeed[];
+    }
+
     return data as PolicyFeed[];
   } catch (err: any) {
-    // Log unexpected errors as well
     console.error("getPolicies: Unexpected Error:", err);
     throw new Error(`getPolicies error: ${err.message || String(err)}`);
   }

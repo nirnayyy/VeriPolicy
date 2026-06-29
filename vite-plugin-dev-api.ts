@@ -60,6 +60,10 @@ async function resolveHandler(pathname: string, method: string): Promise<Handler
     const { handlePolicySyncRequest } = await import("./server/policySync.ts");
     return handlePolicySyncRequest;
   }
+  if (pathname === "/api/chat" && method === "POST") {
+    const { handleChatRequest } = await import("./server/chat.ts");
+    return handleChatRequest;
+  }
   return null;
 }
 
