@@ -11,6 +11,7 @@ import { reportError } from "../lib/error-reporting";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/contexts/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { FloatingAiAssistant } from "@/components/ui/glowing-ai-chat-assistant";
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
@@ -76,8 +77,10 @@ function RootComponent() {
           <HeadContent />
           <Outlet />
           <Toaster />
+          <FloatingAiAssistant />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
 }
+

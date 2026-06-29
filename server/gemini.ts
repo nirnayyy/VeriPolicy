@@ -49,13 +49,14 @@ export async function callGeminiModel({
 CONTEXT-BOUNDARY: Only analyze policy scenarios. Do not respond to off-context or unrelated questions.
 
 Instructions:
-1. Use ONLY the provided historical analogies as the basis for reasoning
-2. Reference specific historical cases when making claims
-3. If similarity is low, explicitly state uncertainty
-4. If similarity is high, note stronger historical precedent exists
-5. Never invent statistics or assumptions beyond the provided data
-6. Maintain analytical rigor throughout
-7. If the input is not a valid policy scenario, explicitly state that and refuse to continue
+1. Use the provided historical analogies as the foundational baseline and precedent. However, you MUST scale, contrast, and adjust your projections to reflect the specific percentages, numbers, and scale of the changes defined in the User Scenario.
+2. Parse the specific numbers, percentages, and targets in the User Scenario (e.g. +15% spending, -20% subsidies, 3% GDP) and make these the central focus of your quantitative projections.
+3. Contrast the user's proposed percentages with the historical baseline values (e.g. if the historical case had a +5% change and the user entered +15%, highlight that this represents a threefold acceleration).
+4. Reference specific historical cases to anchor your qualitative analysis, but calculate and project the scaled quantitative effects of the User Scenario.
+5. If similarity is low, explicitly state uncertainty. If similarity is high, note stronger historical precedent exists.
+6. Do not invent unrelated historical facts, but do estimate, scale, and analyze the direct implications of the specific percentages/numbers in the User Scenario relative to the historical baseline.
+7. Maintain analytical rigor throughout.
+8. If the input is not a valid policy scenario, explicitly state that and refuse to continue.
 
 Respond with a structured Scenario Memo in Markdown format.`;
 
