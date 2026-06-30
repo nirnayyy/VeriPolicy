@@ -1,13 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Newspaper } from "lucide-react";
+import { Newspaper, RefreshCw, Search, Maximize2 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { PolicyFeed } from "@/lib/supabase/types";
 import { getPolicies } from "@/services/policyService";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/tracker")({
   head: () => ({
@@ -140,14 +143,50 @@ function mapPolicy(policy: PolicyFeed): PolicyItem {
 const FILTERS = ["All", "Defence", "Climate", "Energy"] as const;
 type Filter = (typeof FILTERS)[number];
 
+const COUNTRIES = [
+  "All",
+  "United States",
+  "China",
+  "India",
+  "Germany",
+  "United Kingdom",
+  "Saudi Arabia",
+  "Sweden"
+] as const;
+
 function TrackerPage() {
   const [filter, setFilter] = useState<Filter>("All");
+  const [countryFilter, setCountryFilter] = useState<string>("All");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selected, setSelected] = useState<PolicyItem | null>(null);
   const [policies, setPolicies] = useState<PolicyItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleSyncFeed = async () => {
+    setSyncing(true);
+    try {
+      const response = await fetch("/api/policy-sync", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error || "Sync failed");
+      toast.success(`Feed updated! Ingested ${result.inserted || 0} new policy events.`);
+      
+      const rows = await getPolicies();
+      const mapped = rows.map(mapPolicy);
+      setPolicies(mapped);
+      if (mapped.length > 0) {
+        setSelected(mapped[0]);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Feed sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -226,39 +265,85 @@ function TrackerPage() {
     }
   };
 
-  const visible = filter === "All" ? policies : policies.filter((a) => a.category === filter.toLowerCase());
+  const visible = policies.filter((a) => {
+    const matchesCategory = filter === "All" || a.category === filter.toLowerCase();
+    const matchesCountry = countryFilter === "All" || 
+      a.headline.toLowerCase().includes(countryFilter.toLowerCase()) || 
+      a.brief.what.toLowerCase().includes(countryFilter.toLowerCase());
+    const matchesSearch = !searchTerm.trim() || 
+      a.headline.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      a.brief.what.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesCountry && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
         className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
-        <div className="mb-8">
-          <div className="font-mono-data text-xs uppercase tracking-widest text-muted-foreground">Policy Tracker</div>
-          <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Recent Policy Activity</h1>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="font-mono-data text-xs uppercase tracking-widest text-muted-foreground">Policy Tracker</div>
+            <h1 className="mt-1 font-display text-3xl font-bold sm:text-4xl">Recent Policy Activity</h1>
+          </div>
+          <Button
+            onClick={handleSyncFeed}
+            disabled={syncing}
+            size="sm"
+            className="h-9 rounded-sm bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklab,var(--primary)_85%,black)] font-mono-data text-[11px] uppercase tracking-wider gap-2 shadow-sm cursor-pointer"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Sync Live Feed"}
+          </Button>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[35fr_65fr]">
           {/* LEFT */}
           <div>
-            <div className="mb-3 font-mono-data text-[11px] uppercase tracking-widest text-muted-foreground">
-              Live Policy Feed
+            <div className="mb-4 space-y-3 bg-muted/30 border border-border/60 p-4 rounded-2xl">
+              <div className="font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+                Filter & Search Feed
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search keywords..."
+                  className="w-full h-8 pl-9 pr-3 rounded-lg border border-border bg-background text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-[var(--primary)]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="font-mono-data text-[9px] uppercase tracking-wider text-muted-foreground block">Category</label>
+                  <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value as Filter)}
+                    className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none"
+                  >
+                    {FILTERS.map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-mono-data text-[9px] uppercase tracking-wider text-muted-foreground block">Country</label>
+                  <select
+                    value={countryFilter}
+                    onChange={(e) => setCountryFilter(e.target.value)}
+                    className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="mb-4 flex flex-wrap gap-2">
-              {FILTERS.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`rounded-full border px-3 py-1 font-mono-data text-xs transition-colors ${
-                    filter === f
-                      ? "border-transparent text-[var(--primary-foreground)]"
-                      : "border-border bg-background text-muted-foreground hover:text-foreground"
-                  }`}
-                  style={filter === f ? { background: "var(--accent-cyan)" } : undefined}
-                >
-                  {f}
-                </button>
-              ))}
+
+            <div className="mb-3 font-mono-data text-[10px] uppercase tracking-widest text-muted-foreground">
+              Live Feed Results ({visible.length})
             </div>
 
             <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-2">
@@ -361,18 +446,69 @@ function TrackerPage() {
                     ))}
                   </div>
 
-                  <div className="mt-6 grid gap-3 sm:flex sm:items-center sm:gap-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 font-mono-data text-[11px] text-muted-foreground">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent-cyan)" }} />
-                      Generated by Llama 3.3 70B via Groq
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 font-mono-data text-[11px] text-muted-foreground">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent-cyan)" }} />
+                        Llama 3.3 (Groq)
+                      </div>
+                      {selected.brief.confidence !== "N/A" && (
+                        <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 font-mono-data text-[11px] text-muted-foreground">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent-green)" }} />
+                          Confidence: {selected.brief.confidence}
+                        </div>
+                      )}
                     </div>
                     {selected.brief.confidence !== "N/A" && (
-                      <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 font-mono-data text-[11px] text-muted-foreground">
-                        <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent-green)" }} />
-                        Confidence: {selected.brief.confidence}
-                      </div>
+                      <Button onClick={() => setIsDetailOpen(true)} variant="outline" className="h-8 rounded-sm font-mono-data text-[10px] uppercase tracking-wider gap-2 cursor-pointer">
+                        <Maximize2 className="h-3.5 w-3.5" /> Maximize Dossier View
+                      </Button>
                     )}
                   </div>
+
+                  <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+                    <DialogContent className="max-w-2xl bg-card border-border rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[85vh]">
+                      <DialogHeader className="border-b border-border/80 pb-4">
+                        <div className="flex items-center justify-between text-[9px] font-mono-data text-muted-foreground uppercase tracking-widest">
+                          <span>OFFICE OF POLICY INTELLIGENCE · BRIEFING DOSSIER</span>
+                          <span>{selected?.date}</span>
+                        </div>
+                        <DialogTitle className="font-display text-2xl font-semibold text-foreground mt-3 leading-snug">
+                          {selected?.headline}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-6 space-y-6 text-sm text-foreground">
+                        <div>
+                          <span className="font-mono-data text-[9px] uppercase tracking-[0.2em] text-muted-foreground block mb-1">Ingestion Source</span>
+                          <span className="font-semibold text-xs uppercase bg-muted px-2.5 py-1 rounded text-foreground">{selected?.source}</span>
+                        </div>
+
+                        <div className="divide-y divide-border/60">
+                          {[
+                            { label: "Executive Summary", body: selected?.brief.what },
+                            { label: "Immediate Operational Impact (0–6 Months)", body: selected?.brief.immediate },
+                            { label: "Geopolitical & Second-Order Consequences", body: selected?.brief.second },
+                            { label: "Standing Open Inquiries", body: selected?.brief.open },
+                          ].map((s) => (
+                            <div key={s.label} className="py-4 first:pt-0">
+                              <span className="font-mono-data text-[9px] uppercase tracking-[0.2em] text-[var(--primary)] block mb-1.5">{s.label}</span>
+                              <p className="leading-relaxed text-foreground/90 font-sans text-sm">{s.body}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="border-t border-border pt-4 flex flex-col gap-2 font-mono-data text-[10px] text-muted-foreground uppercase tracking-wider">
+                          <div className="flex items-center justify-between">
+                            <span>Confidence: {selected?.brief.confidence}</span>
+                            <span>Model: Llama 3.3 70B (Groq)</span>
+                          </div>
+                          <div className="text-[9px] text-center text-muted-foreground/80 mt-3 italic">
+                            "This document contains strategic policy signal summaries for authorized analyst review."
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
 
                   {selected.brief.confidence === "N/A" && (
                     <div className="mt-5 flex flex-col gap-3">

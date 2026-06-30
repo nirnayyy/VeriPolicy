@@ -44,6 +44,10 @@ async function resolveHandler(pathname: string, method: string): Promise<Handler
     const { handleForesightRequest } = await import("./server/foresight.ts");
     return handleForesightRequest;
   }
+  if (pathname === "/api/assistant" && method === "POST") {
+    const { handleAssistantRequest } = await import("./server/assistant.ts");
+    return handleAssistantRequest;
+  }
   if (pathname === "/api/simulation-history" && method === "GET") {
     const { handleSimulationHistoryRequest } = await import("./server/foresight.ts");
     return handleSimulationHistoryRequest;

@@ -1,5 +1,16 @@
 import * as React from "react";
-import Plot from "react-plotly.js";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  AreaChart,
+  Area,
+} from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import analyticsService, { AnalyticsRow } from "@/services/analyticsService";
@@ -17,73 +28,47 @@ type AnalyticsChartsProps = {
 };
 
 const COLOR_PALETTE = [
-  "#22c55e",
-  "#38bdf8",
-  "#f97316",
-  "#a855f7",
-  "#fb7185",
-  "#fcd34d",
-  "#0ea5e9",
+  "var(--primary)",            // Terracotta
+  "var(--accent-cyan)",        // Teal
+  "var(--accent-violet)",      // Soft purple / dark rose
+  "var(--accent-green)",       // Sage green
+  "var(--accent-amber)",       // Blush / Gold
+  "#f97316",                   // Orange accent
+  "#8b597b",                   // Rosewood
 ];
 
-function buildSeries(
-  groupedRows: Map<string, AnalyticsDatum[]>,
-  valueKey: "militaryExpenditure" | "co2",
-): Plotly.Data[] {
-  return Array.from(groupedRows, ([country, rows], index) => ({
-    x: rows.map((row) => row.year),
-    y: rows.map((row) => row[valueKey] ?? null),
-    name: country,
-    type: "scatter",
-    mode: "lines+markers",
-    line: {
-      shape: "spline",
-      width: 3,
-      color: COLOR_PALETTE[index % COLOR_PALETTE.length],
-    },
-    marker: {
-      size: 6,
-    },
-    connectgaps: false,
-    hovertemplate: `${country}<br>Year: %{x}<br>${
-      valueKey === "militaryExpenditure" ? "Military expenditure" : "CO2 emissions"
-    }: %{y}<extra></extra>`,
-  }));
-}
-
-function buildLayout(title: string, yLabel: string): Partial<Plotly.Layout> {
-  return {
-    title: {
-      text: title,
-      font: { family: "Inter, sans-serif", size: 18, color: "var(--foreground)" },
-    },
-    autosize: true,
-    margin: { l: 60, r: 24, t: 52, b: 48 },
-    paper_bgcolor: "var(--card)",
-    plot_bgcolor: "var(--card)",
-    font: { color: "var(--foreground)", family: "Inter, sans-serif" },
-    legend: {
-      orientation: "h",
-      x: 0,
-      y: 1.08,
-      font: { color: "var(--muted-foreground)" },
-    },
-    xaxis: {
-      title: { text: "Year", font: { size: 13 } },
-      tickmode: "auto",
-      tickfont: { color: "var(--muted-foreground)" },
-      gridcolor: "rgba(148, 163, 184, 0.15)",
-      zerolinecolor: "rgba(148, 163, 184, 0.25)",
-    },
-    yaxis: {
-      title: { text: yLabel, font: { size: 13 } },
-      tickfont: { color: "var(--muted-foreground)" },
-      gridcolor: "rgba(148, 163, 184, 0.15)",
-      zerolinecolor: "rgba(148, 163, 184, 0.25)",
-    },
-    hovermode: "x unified",
-  };
-}
+const CustomTooltip = ({ active, payload, label, valueLabel }: any) => {
+  if (active && payload && payload.length) {
+    // Sort items by value descending for readability
+    const sortedPayload = [...payload].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+    return (
+      <div className="glass rounded-xl p-3 shadow-xl border border-border min-w-[200px] bg-background/90 text-foreground">
+        <div className="font-mono-data text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2 border-b border-border/60 pb-1">
+          Year: {label}
+        </div>
+        <div className="space-y-1.5">
+          {sortedPayload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: entry.color || entry.stroke }} />
+                <span className="font-medium">{entry.name}</span>
+              </div>
+              <span className="font-mono-data font-semibold">
+                {entry.value !== null && entry.value !== undefined
+                  ? entry.value.toLocaleString(undefined, { maximumFractionDigits: 1 })
+                  : "—"}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 border-t border-border/40 pt-1 text-[9px] font-mono-data text-muted-foreground text-right uppercase tracking-wider">
+          {valueLabel}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ countries, yearRange }) => {
   const [data, setData] = React.useState<AnalyticsRow[]>([]);
@@ -122,89 +107,183 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ countries, yearRange 
       .sort((a, b) => a.country.localeCompare(b.country) || a.year - b.year);
   }, [countries, data, yearRange]);
 
-  const groupedRows = React.useMemo(() => {
-    const map = new Map<string, AnalyticsDatum[]>();
+  // Pivot data for Recharts: array of { year, "USA_military": X, "China_military": Y, ... }
+  const chartedData = React.useMemo(() => {
+    const yearsMap = new Map<number, Record<string, any>>();
+    
     for (const row of filteredRows) {
-      const items = map.get(row.country) ?? [];
-      items.push(row);
-      map.set(row.country, items);
+      if (!yearsMap.has(row.year)) {
+        yearsMap.set(row.year, { year: row.year });
+      }
+      const dataObj = yearsMap.get(row.year)!;
+      dataObj[`${row.country}_military`] = row.militaryExpenditure;
+      dataObj[`${row.country}_co2`] = row.co2;
     }
-    for (const rows of map.values()) {
-      rows.sort((a, b) => a.year - b.year);
-    }
-    return map;
+    
+    return Array.from(yearsMap.values()).sort((a, b) => a.year - b.year);
   }, [filteredRows]);
 
-  const militaryData = React.useMemo(() => buildSeries(groupedRows, "militaryExpenditure"), [groupedRows]);
-  const co2Data = React.useMemo(() => buildSeries(groupedRows, "co2"), [groupedRows]);
-
-  const chartConfig: Partial<Plotly.Config> = {
-    responsive: true,
-    displayModeBar: false,
-  };
+  const uniqueCountries = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const row of filteredRows) {
+      set.add(row.country);
+    }
+    return Array.from(set).sort();
+  }, [filteredRows]);
 
   return (
     <div className="space-y-6">
       <Card className="border-border bg-card p-6">
-        <CardHeader>
-          <CardTitle>Analytics overview</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl font-display font-semibold tracking-tight">Analytics overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Military expenditure and CO2 emissions for selected countries. The charts are rendered from the shared analytics dataset and adapt to available screen width.
+          <p className="mb-6 text-sm text-muted-foreground leading-relaxed">
+            Military expenditure and CO2 emissions for selected countries. The charts are rendered dynamically using interactive Recharts components matching the platform design tokens.
           </p>
           {loading ? (
-            <div className="rounded-2xl border border-border bg-muted px-4 py-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-border bg-muted/40 px-4 py-12 text-center text-sm text-muted-foreground font-mono-data">
               Loading analytics data...
             </div>
           ) : error ? (
-            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-8 text-center text-sm text-destructive">
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-8 text-center text-sm text-destructive font-mono-data">
               {error}
             </div>
           ) : filteredRows.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-muted px-4 py-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-border bg-muted/40 px-4 py-12 text-center text-sm text-muted-foreground font-mono-data">
               No analytics data available for the selected countries.
             </div>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-1">
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle>Military Expenditure by Year</CardTitle>
-                </CardHeader>
-                <CardContent className="min-h-[360px]">
-                  <Plot
-                    data={militaryData}
-                    layout={buildLayout("Military Expenditure by Year", "Military expenditure")}
-                    config={chartConfig}
-                    style={{ width: "100%", height: "100%" }}
-                    useResizeHandler
-                  />
-                </CardContent>
-              </Card>
+            <div className="space-y-8">
+              {/* Military Expenditure Chart */}
+              <div className="rounded-2xl border border-border/80 bg-background/50 p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-display text-lg font-semibold text-foreground">Military Expenditure by Year</h4>
+                    <p className="text-xs text-muted-foreground">Measured in USD Millions (historical constant prices)</p>
+                  </div>
+                </div>
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                      <XAxis
+                        dataKey="year"
+                        stroke="var(--muted-foreground)"
+                        opacity={0.7}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                      />
+                      <YAxis
+                        stroke="var(--muted-foreground)"
+                        opacity={0.7}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                        tickFormatter={(value) => (value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value)}
+                      />
+                      <Tooltip content={<CustomTooltip valueLabel="Military Expenditure (M$)" />} cursor={{ stroke: 'var(--primary)', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                      <Legend
+                        verticalAlign="top"
+                        height={36}
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: "11px", fontFamily: "var(--font-mono)" }}
+                      />
+                      {uniqueCountries.map((country, index) => (
+                        <Line
+                          key={country}
+                          type="monotone"
+                          dataKey={`${country}_military`}
+                          name={country}
+                          stroke={COLOR_PALETTE[index % COLOR_PALETTE.length]}
+                          strokeWidth={2.5}
+                          dot={{ r: 2, strokeWidth: 1 }}
+                          activeDot={{ r: 5, strokeWidth: 0 }}
+                          connectNulls
+                          animationDuration={500}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle>CO2 Emissions by Year</CardTitle>
-                </CardHeader>
-                <CardContent className="min-h-[360px]">
-                  <Plot
-                    data={co2Data}
-                    layout={buildLayout("CO2 Emissions by Year", "CO2 emissions")}
-                    config={chartConfig}
-                    style={{ width: "100%", height: "100%" }}
-                    useResizeHandler
-                  />
-                </CardContent>
-              </Card>
+              {/* CO2 Emissions Chart */}
+              <div className="rounded-2xl border border-border/80 bg-background/50 p-4 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h4 className="font-display text-lg font-semibold text-foreground">CO2 Emissions by Year</h4>
+                    <p className="text-xs text-muted-foreground">Measured in million tonnes of territorial CO2</p>
+                  </div>
+                </div>
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        {uniqueCountries.map((country, index) => {
+                          const color = COLOR_PALETTE[index % COLOR_PALETTE.length];
+                          return (
+                            <linearGradient key={`grad-${country}`} id={`color-${country}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={color} stopOpacity={0.18} />
+                              <stop offset="95%" stopColor={color} stopOpacity={0.01} />
+                            </linearGradient>
+                          );
+                        })}
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                      <XAxis
+                        dataKey="year"
+                        stroke="var(--muted-foreground)"
+                        opacity={0.7}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                      />
+                      <YAxis
+                        stroke="var(--muted-foreground)"
+                        opacity={0.7}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                        tickFormatter={(value) => (value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value)}
+                      />
+                      <Tooltip content={<CustomTooltip valueLabel="CO2 Emissions (Mt)" />} cursor={{ stroke: 'var(--accent-cyan)', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                      <Legend
+                        verticalAlign="top"
+                        height={36}
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: "11px", fontFamily: "var(--font-mono)" }}
+                      />
+                      {uniqueCountries.map((country, index) => (
+                        <Area
+                          key={country}
+                          type="monotone"
+                          dataKey={`${country}_co2`}
+                          name={country}
+                          stroke={COLOR_PALETTE[index % COLOR_PALETTE.length]}
+                          fill={`url(#color-${country})`}
+                          strokeWidth={2}
+                          dot={{ r: 1 }}
+                          activeDot={{ r: 4 }}
+                          connectNulls
+                          animationDuration={600}
+                        />
+                      ))}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-              <Card className="border-border bg-card p-4">
-                <CardHeader>
-                  <CardTitle>Data Insights</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Insights rows={filteredRows} countries={countries} />
-                </CardContent>
-              </Card>
+              {/* Data Insights Panel */}
+              <div className="rounded-2xl border border-border/80 bg-background/30 p-5">
+                <h4 className="font-mono-data text-xs uppercase tracking-widest text-muted-foreground mb-4">
+                  Data Insights Engine
+                </h4>
+                <Insights rows={filteredRows} countries={countries} />
+              </div>
             </div>
           )}
         </CardContent>
@@ -256,24 +335,38 @@ function Insights({ rows, countries }: { rows: AnalyticsRow[]; countries: string
     }
     const denom = Math.sqrt(denX * denY);
     const r = denom === 0 ? 0 : num / denom;
-    if (r > 0.2) corrText = "Military spending and CO2 emissions show a positive trend relationship in the selected historical analogies.";
-    else if (r < -0.2) corrText = "Military spending and CO2 emissions show a negative trend relationship in the selected historical analogies.";
-    else corrText = "Military spending and CO2 emissions show little or no linear relationship in the selected historical analogies.";
+    if (r > 0.4) {
+      corrText = "Strategic Calibration: There is a strong positive correlation between defense spending trends and carbon emissions across the selected historical period. Expanding heavy industrial defense capacities historically signals a corresponding rise in greenhouse outputs.";
+    } else if (r < -0.4) {
+      corrText = "Decoupling Effect: Emissions and defense expenditures show a negative correlation, demonstrating periods where resource reallocation or green modernization succeeded in decoupling military output from industrial emissions.";
+    } else {
+      corrText = "Neutral Trend: The correlation index indicates that emissions and defense spending fluctuated independently, indicating that local policy decisions or clean energy shifts outweighed the direct footprint of military spending.";
+    }
   }
 
   return (
-    <div className="space-y-3 text-sm text-muted-foreground">
-      <div>
-        <strong className="text-foreground">Country with highest military spending:</strong>{' '}
-        {maxMilCountry ?? 'N/A'}
+    <div className="grid gap-4 sm:grid-cols-3 text-sm">
+      <div className="rounded-xl border border-border/50 bg-background/50 p-4">
+        <span className="font-mono-data text-[10px] uppercase tracking-wider text-muted-foreground">Highest Defense Capital</span>
+        <div className="mt-1 font-display text-lg font-semibold text-foreground">{maxMilCountry ?? "N/A"}</div>
+        <div className="text-[10px] text-muted-foreground mt-1">
+          Peak: {maxMil > -Infinity ? `${Math.round(maxMil).toLocaleString()} M$` : "—"}
+        </div>
       </div>
-      <div>
-        <strong className="text-foreground">Country with highest CO2 emissions:</strong>{' '}
-        {maxCo2Country ?? 'N/A'}
+      <div className="rounded-xl border border-border/50 bg-background/50 p-4">
+        <span className="font-mono-data text-[10px] uppercase tracking-wider text-muted-foreground">Highest Emissions Footprint</span>
+        <div className="mt-1 font-display text-lg font-semibold text-foreground">{maxCo2Country ?? "N/A"}</div>
+        <div className="text-[10px] text-muted-foreground mt-1">
+          Peak: {maxCo2 > -Infinity ? `${Math.round(maxCo2).toLocaleString()} Mt` : "—"}
+        </div>
       </div>
-      <div className="pt-2 text-foreground">{corrText}</div>
+      <div className="rounded-xl border border-border/50 bg-background/50 p-4 sm:col-span-1">
+        <span className="font-mono-data text-[10px] uppercase tracking-wider text-muted-foreground">Geopolitical Calibration</span>
+        <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{corrText}</p>
+      </div>
     </div>
   );
 }
 
 export default AnalyticsCharts;
+

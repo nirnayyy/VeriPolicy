@@ -63,6 +63,7 @@ function ProfilePage() {
   const [organizationInput, setOrganizationInput] = useState<string | null>(null);
   const [roleInput, setRoleInput] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedBriefForView, setSelectedBriefForView] = useState<any | null>(null);
 
   function beginEdit() {
     setFullNameInput(profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "");
@@ -70,6 +71,72 @@ function ProfilePage() {
     setRoleInput(profile?.role ?? null);
     setEditing(true);
   }
+
+  const downloadBriefPdf = async (brief: any) => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      doc.setDrawColor(241, 215, 205);
+      doc.rect(5, 5, 200, 287);
+
+      doc.setFont("Garamond", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text("VERIPOLICY OFFICE OF POLICY INTELLIGENCE", 15, 20);
+      doc.text("ARCHIVED FORESIGHT MEMO", 145, 20);
+
+      doc.setDrawColor(226, 149, 120);
+      doc.setLineWidth(0.5);
+      doc.line(15, 23, 195, 23);
+
+      doc.setTextColor(43, 29, 24);
+      doc.setFontSize(12);
+      doc.text(`SUBJECT: ${brief.title.toUpperCase()}`, 15, 34);
+
+      doc.setFontSize(10);
+      doc.setFont("Courier", "italic");
+      doc.text(`REFERENCE ID: ${brief.ref_id}`, 15, 42);
+
+      let currentY = 47;
+      doc.line(15, currentY, 195, currentY);
+      currentY += 8;
+
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(43, 29, 24);
+      
+      const splitBody = doc.splitTextToSize(brief.body || "No content.", 175);
+      doc.text(splitBody, 15, currentY);
+      currentY += (splitBody.length * 4.8) + 12;
+
+      if (currentY > 240) {
+        doc.addPage();
+        doc.rect(5, 5, 200, 287);
+        currentY = 20;
+      }
+      
+      doc.setFont("Courier", "italic");
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text("PREPARED AND CERTIFIED BY THE FORESIGHT DESK", 15, currentY);
+      
+      doc.line(15, currentY + 12, 80, currentY + 12);
+      doc.text("AUTHORIZED ANALYST SIGNATURE", 15, currentY + 17);
+
+      doc.setFont("Courier", "bold");
+      doc.setTextColor(20, 20, 20);
+      doc.text(displayName, 20, currentY + 9);
+
+      doc.save(`veripolicy-archive-${brief.ref_id}.pdf`);
+    } catch (e) {
+      console.error("PDF generation failed", e);
+    }
+  };
 
   async function saveEdits() {
     if (!user) return;
@@ -163,13 +230,20 @@ function ProfilePage() {
               </div>
             </div>
 
-            <div className="md:justify-self-center md:px-6">
+            <div className="md:justify-self-center md:px-6 flex flex-col gap-4">
               <ul className="grid grid-cols-2 gap-x-8 gap-y-2 font-mono-data text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" />{email}</li>
                 <li className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" />{station}</li>
                 <li className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" />{clearance}</li>
                 <li className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" />Joined {joined}</li>
               </ul>
+              
+              <div className="rounded-xl border border-border bg-card/60 p-3.5 max-w-sm">
+                <span className="font-mono-data text-[8px] uppercase tracking-wider text-muted-foreground block mb-2">Digital Signature Dossier Certificate</span>
+                <div className="h-10 border border-dashed border-border/80 rounded-md flex items-center justify-center bg-background p-2">
+                  <span className="text-xl text-foreground font-semibold italic select-none" style={{ fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive" }}>{displayName}</span>
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-2 md:justify-self-end">
@@ -294,10 +368,18 @@ function ProfilePage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button className="grid h-9 w-9 place-items-center rounded-sm border border-border text-muted-foreground transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]">
+                        <button 
+                          onClick={() => downloadBriefPdf(d)}
+                          className="grid h-9 w-9 place-items-center rounded-sm border border-border text-muted-foreground transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] cursor-pointer"
+                          title="Download PDF"
+                        >
                           <Download className="h-3.5 w-3.5" />
                         </button>
-                        <button className="grid h-9 w-9 place-items-center rounded-sm border border-border text-muted-foreground transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]">
+                        <button 
+                          onClick={() => setSelectedBriefForView(d)}
+                          className="grid h-9 w-9 place-items-center rounded-sm border border-border text-muted-foreground transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)] cursor-pointer"
+                          title="View Memo Briefing"
+                        >
                           <FileText className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -334,6 +416,35 @@ function ProfilePage() {
               </ul>
             )}
 
+            <div className="mt-8 rounded-sm border border-border bg-card p-5">
+              <div className="font-mono-data text-[9px] uppercase tracking-[0.22em] text-muted-foreground mb-3.5">System Integrity Monitor</div>
+              <div className="space-y-3.5 text-xs">
+                <div>
+                  <div className="flex items-center justify-between text-foreground font-mono-data text-[9px] uppercase tracking-wider mb-1.5">
+                    <span>API Quota Usage</span>
+                    <span>87% Remaining</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-border rounded-full overflow-hidden">
+                    <div className="h-full bg-[var(--primary)] rounded-full" style={{ width: "87%" }} />
+                  </div>
+                </div>
+                <div className="h-px bg-border/60 my-2" />
+                {[
+                  { name: "Gemini Flash API", status: "Active", latency: "142ms", color: "bg-emerald-500" },
+                  { name: "Groq Llama 3.3", status: "Active", latency: "185ms", color: "bg-emerald-500" },
+                  { name: "Supabase DB Cluster", status: "Active", latency: "18ms", color: "bg-emerald-500" },
+                ].map((sys) => (
+                  <div key={sys.name} className="flex items-center justify-between font-mono-data text-[9px]">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`h-1.5 w-1.5 rounded-full ${sys.color} animate-pulse`} />
+                      <span className="text-muted-foreground">{sys.name}</span>
+                    </div>
+                    <span className="text-foreground">{sys.latency}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-10 rounded-sm border border-border bg-[var(--surface)] p-5">
               <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Session</div>
               <p className="mt-2 font-serif-italic text-sm text-foreground/70">
@@ -342,7 +453,7 @@ function ProfilePage() {
               <Button
                 onClick={logout}
                 variant="outline"
-                className="mt-5 h-10 w-full rounded-sm border-border font-mono-data text-[11px] uppercase tracking-[0.2em]"
+                className="mt-5 h-10 w-full rounded-sm border-border font-mono-data text-[11px] uppercase tracking-[0.2em] cursor-pointer"
               >
                 <LogOut className="h-3.5 w-3.5" /> End Session
               </Button>
@@ -350,6 +461,34 @@ function ProfilePage() {
           </aside>
         </div>
       </section>
+
+      <Dialog open={!!selectedBriefForView} onOpenChange={(o) => !o && setSelectedBriefForView(null)}>
+        {selectedBriefForView && (
+          <DialogContent className="max-w-2xl bg-card border-border rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[85vh]">
+            <DialogHeader className="border-b border-border/80 pb-4">
+              <div className="flex items-center justify-between text-[9px] font-mono-data text-muted-foreground uppercase tracking-widest">
+                <span>VERIPOLICY ARCHIVE · DOSSIER {selectedBriefForView.ref_id}</span>
+                <span>{new Date(selectedBriefForView.updated_at).toLocaleDateString()}</span>
+              </div>
+              <DialogTitle className="font-display text-2xl font-semibold text-foreground mt-3 leading-snug">
+                {selectedBriefForView.title}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-6 space-y-6 text-sm text-foreground">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 font-sans border border-border/60 bg-muted/20 p-4 rounded-xl">
+                {selectedBriefForView.body || "No body content available in draft."}
+              </div>
+
+              <div className="border-t border-border pt-4 flex flex-col gap-2 font-mono-data text-[10px] text-muted-foreground uppercase tracking-wider">
+                <div className="flex items-center justify-between">
+                  <span>Status: {selectedBriefForView.status}</span>
+                  <span>Jurisdiction: {selectedBriefForView.tag || "General"}</span>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }

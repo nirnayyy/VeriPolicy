@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Info, Bot, X } from 'lucide-react';
+import { Send, Info, Bot, X, Volume2, VolumeX } from 'lucide-react';
 
 interface Message {
   sender: 'user' | 'ai';
@@ -127,24 +127,57 @@ const FloatingAiAssistant: React.FC = () => {
     { sender: 'ai', text: "Hi! I'm your VeriPolicy assistant. Ask me about the Scenario Simulator, Policy Tracker, Comparison Dashboard, or any platform feature." }
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [speakingText, setSpeakingText] = useState<string | null>(null);
   const maxChars = 500;
   const chatRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
+  const handleSpeak = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (speakingText === text) {
+      window.speechSynthesis.cancel();
+      setSpeakingText(null);
+    } else {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.onend = () => setSpeakingText(null);
+      utterance.onerror = () => setSpeakingText(null);
+      setSpeakingText(text);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleSend = async () => {
     const trimmed = message.trim();
     if (!trimmed || isTyping) return;
 
+    const currentHistory = [...messages];
     setMessages((prev) => [...prev, { sender: 'user', text: trimmed }]);
     setMessage('');
     setIsTyping(true);
 
-    // Simulate brief typing delay for natural feel
-    setTimeout(() => {
-      const reply = getResponse(trimmed);
-      setMessages((prev) => [...prev, { sender: 'ai', text: reply }]);
+    try {
+      const response = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed, history: currentHistory }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Assistant API returned error status");
+      }
+
+      const data = await response.json();
+      setMessages((prev) => [...prev, { sender: 'ai', text: data.reply }]);
+    } catch (err) {
+      console.warn("Live assistant API failed, using local fallback", err);
+      setTimeout(() => {
+        const reply = getResponse(trimmed);
+        setMessages((prev) => [...prev, { sender: 'ai', text: reply }]);
+      }, 300);
+    } finally {
       setIsTyping(false);
-    }, 400);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -209,8 +242,17 @@ const FloatingAiAssistant: React.FC = () => {
                   {msg.sender === 'ai' && (
                     <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-[10px] text-white font-mono font-bold shadow-md">VP</div>
                   )}
-                  <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-[80%] whitespace-pre-line ${msg.sender === 'user' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] rounded-tr-none shadow-sm' : 'bg-zinc-800/90 text-zinc-100 rounded-tl-none border border-zinc-700/30'}`}>
+                  <div className={`relative group rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-[80%] whitespace-pre-line ${msg.sender === 'user' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] rounded-tr-none shadow-sm' : 'bg-zinc-800/90 text-zinc-100 rounded-tl-none border border-zinc-700/30'}`}>
                     {msg.text}
+                    {msg.sender === 'ai' && (
+                      <button
+                        onClick={() => handleSpeak(msg.text)}
+                        className="absolute -right-7 bottom-1.5 p-1 rounded bg-zinc-800/70 border border-zinc-700/40 text-zinc-400 hover:text-zinc-200 cursor-pointer shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        title={speakingText === msg.text ? "Mute" : "Speak text"}
+                      >
+                        {speakingText === msg.text ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

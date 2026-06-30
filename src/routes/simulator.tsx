@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Loader2, Download, Check } from "lucide-react";
+import { FileText, Loader2, Download, Check, Share2, Volume2 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { fetchSimulationHistory, generateForesightMemo } from "@/services/simulatorService";
 import { createBrief } from "@/lib/supabase/dashboard";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/simulator")({
   head: () => ({
@@ -167,6 +168,62 @@ type SimulationHistoryItem = {
   created_at: string;
 };
 
+function calculateGeopoliticalRiskScore(scenario: string): number {
+  const norm = scenario.toLowerCase();
+  let score = 25;
+  if (norm.includes("defense") || norm.includes("defence")) score += 20;
+  if (norm.includes("spend") || norm.includes("budget")) score += 10;
+  if (norm.includes("cut") || norm.includes("reduce")) score += 15;
+  if (norm.includes("sanction") || norm.includes("tariff") || norm.includes("restrict") || norm.includes("trade war")) score += 25;
+  if (norm.includes("carbon tax") || norm.includes("co2") || norm.includes("emission")) score += 10;
+  if (norm.includes("subsidy") || norm.includes("subsidies")) score += 10;
+
+  const percentMatch = norm.match(/(\d+)%/);
+  if (percentMatch) {
+    score += Math.min(25, Number(percentMatch[1]));
+  }
+  return Math.min(95, Math.max(10, score));
+}
+
+function parsePercentageFromScenario(scenario: string, domain: "defense" | "emissions" | "subsidy"): string {
+  const norm = scenario.toLowerCase();
+  const match = norm.match(new RegExp(`(\\d+)%\\s*(?:increase|decrease|more|less|cut|add|growth)?\\s*(?:in\\s*)?${domain}`));
+  if (match) return `${match[1]}%`;
+  const general = norm.match(/(\d+)%/g);
+  if (general && general.length > 0) {
+    if (domain === "defense") return general[0];
+    if (domain === "subsidy" && general.length > 1) return general[1];
+    return general[0];
+  }
+  return "N/A";
+}
+
+function renderBodyWithCitations(bodyText: string, matches: { country: string; period: string; similarity: number }[]) {
+  const parts = bodyText.split(/(\[\d+\])/g);
+  return parts.map((part, index) => {
+    const matchResult = part.match(/^\[(\d+)\]$/);
+    if (matchResult) {
+      const matchIndex = parseInt(matchResult[1], 10) - 1;
+      const match = matches[matchIndex];
+      if (match) {
+        return (
+          <span key={index} className="group relative inline-block mx-0.5 select-none">
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--primary)]/20 font-mono-data text-[9px] font-semibold text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-colors cursor-help">
+              {matchIndex + 1}
+            </span>
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 rounded-lg bg-zinc-950 p-2.5 text-[10px] leading-relaxed text-zinc-100 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 shadow-xl border border-zinc-800 z-30 text-left">
+              <span className="font-semibold block">{match.country}</span>
+              <span className="text-[9px] text-zinc-400 block uppercase tracking-wider mt-0.5">{match.period}</span>
+              <span className="text-[9px] block text-[var(--primary)] mt-1">Similarity: {(match.similarity * 100).toFixed(1)}%</span>
+            </span>
+          </span>
+        );
+      }
+    }
+    return part;
+  });
+}
+
 function SimulatorPage() {
   const [input, setInput] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done">("idle");
@@ -177,6 +234,41 @@ function SimulatorPage() {
   const [history, setHistory] = useState<SimulationHistoryItem[]>([]);
   const [savedBriefId, setSavedBriefId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isTypingExample, setIsTypingExample] = useState(false);
+  const [speakingSection, setSpeakingSection] = useState<string | null>(null);
+
+  const handleSpeakSection = (text: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (speakingSection === text) {
+      window.speechSynthesis.cancel();
+      setSpeakingSection(null);
+    } else {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text.replace(/\*\*/g, ""));
+      utterance.onend = () => setSpeakingSection(null);
+      utterance.onerror = () => setSpeakingSection(null);
+      setSpeakingSection(text);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const riskScore = useMemo(() => calculateGeopoliticalRiskScore(input), [input]);
+
+  const handleExampleClick = (exText: string) => {
+    if (isTypingExample || state === "loading") return;
+    setIsTypingExample(true);
+    setInput("");
+    
+    let currentIdx = 0;
+    const interval = setInterval(() => {
+      setInput((prev) => exText.slice(0, currentIdx + 1));
+      currentIdx++;
+      if (currentIdx >= exText.length) {
+        clearInterval(interval);
+        setIsTypingExample(false);
+      }
+    }, 15);
+  };
 
   const chartCountries = useMemo(() => {
     const extracted = getCountriesFromScenario(input);
@@ -209,6 +301,19 @@ function SimulatorPage() {
     };
 
     loadHistory();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URL(window.location.href).searchParams;
+      const qScenario = params.get("scenario");
+      if (qScenario) {
+        setInput(decodeURIComponent(qScenario));
+      }
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   const saveMemoAsBrief = async (scenario: string, memo: string, conf: "High" | "Medium" | "Low") => {
@@ -353,6 +458,118 @@ function SimulatorPage() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPdfBrief = async () => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      // Page border
+      doc.setDrawColor(241, 215, 205);
+      doc.rect(5, 5, 200, 287);
+
+      // Title/Header
+      doc.setFont("Garamond", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text("VERIPOLICY OFFICE OF POLICY INTELLIGENCE", 15, 20);
+      doc.text("FORESIGHT MEMO", 155, 20);
+
+      doc.setDrawColor(226, 149, 120);
+      doc.setLineWidth(0.5);
+      doc.line(15, 23, 195, 23);
+
+      // Subject/Scenario
+      doc.setTextColor(43, 29, 24);
+      doc.setFontSize(14);
+      doc.text("SUBJECT: SCENARIO FORESIGHT MEMO", 15, 34);
+
+      doc.setFontSize(10);
+      doc.setFont("Courier", "italic");
+      doc.text("SCENARIO STATEMENT:", 15, 42);
+      
+      const splitScenario = doc.splitTextToSize(input, 175);
+      doc.text(splitScenario, 15, 47);
+      
+      let currentY = 47 + (splitScenario.length * 5) + 6;
+      doc.line(15, currentY, 195, currentY);
+      currentY += 8;
+
+      // Render Memo Sections
+      doc.setFont("Helvetica", "normal");
+      for (const section of memoSections) {
+        if (currentY > 260) {
+          doc.addPage();
+          doc.setDrawColor(241, 215, 205);
+          doc.rect(5, 5, 200, 287);
+          currentY = 20;
+        }
+
+        doc.setFontSize(11);
+        doc.setFont("Helvetica", "bold");
+        doc.setTextColor(226, 149, 120);
+        doc.text(section.title.toUpperCase(), 15, currentY);
+        currentY += 5;
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(43, 29, 24);
+        
+        const cleanBody = section.body.replace(/\*\*/g, "");
+        const splitBody = doc.splitTextToSize(cleanBody, 175);
+        doc.text(splitBody, 15, currentY);
+        currentY += (splitBody.length * 4.8) + 8;
+      }
+
+      // Analyst signature block
+      if (currentY > 240) {
+        doc.addPage();
+        doc.setDrawColor(241, 215, 205);
+        doc.rect(5, 5, 200, 287);
+        currentY = 20;
+      }
+      
+      currentY += 10;
+      doc.setFont("Courier", "italic");
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text("PREPARED AND CERTIFIED BY THE FORESIGHT DESK", 15, currentY);
+      
+      doc.line(15, currentY + 12, 80, currentY + 12);
+      doc.text("AUTHORIZED ANALYST SIGNATURE", 15, currentY + 17);
+
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        if (profile?.full_name) {
+          doc.setFont("Courier", "bold");
+          doc.setTextColor(20, 20, 20);
+          doc.text(profile.full_name, 20, currentY + 9);
+        }
+      }
+
+      doc.save(`veripolicy-memo-${Date.now().toString().slice(-6)}.pdf`);
+    } catch (e) {
+      console.error("PDF generation failed", e);
+    }
+  };
+
+  const generateShareLink = () => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.origin + "/simulator");
+    url.searchParams.set("scenario", input);
+    navigator.clipboard.writeText(url.toString());
+    toast.success("Shareable scenario link copied to clipboard!");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -415,8 +632,9 @@ function SimulatorPage() {
                   {EXAMPLES.map((ex) => (
                     <button
                       key={ex}
-                      onClick={() => setInput(EXAMPLE_FULL[ex])}
-                      className="rounded-2xl border border-border bg-muted px-4 py-3 text-left text-sm text-muted-foreground transition hover:border-[var(--accent-cyan)] hover:text-foreground"
+                      onClick={() => handleExampleClick(EXAMPLE_FULL[ex])}
+                      className="rounded-2xl border border-border bg-muted px-4 py-3 text-left text-sm text-muted-foreground transition hover:border-[var(--accent-cyan)] hover:text-foreground cursor-pointer disabled:opacity-50"
+                      disabled={isTypingExample || state === "loading"}
                     >
                       {ex}
                     </button>
@@ -479,10 +697,71 @@ function SimulatorPage() {
 
                             <AnalyticsCharts countries={displayedCountries} />
 
-                            <div className="mt-6 rounded-3xl border border-border bg-background p-4">
-                              <div className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground">Confidence</div>
-                              <div className="mt-3 text-2xl font-semibold text-foreground">
-                                {confidence ?? "Low"}
+                            <AnalyticsCharts countries={displayedCountries} />
+
+                            <div className="mt-6 grid grid-cols-2 gap-4">
+                              <div className="rounded-3xl border border-border bg-background p-5 flex flex-col justify-between">
+                                <div>
+                                  <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Confidence Score</div>
+                                  <div className="mt-3 text-2xl font-semibold text-foreground">{confidence ?? "Low"}</div>
+                                </div>
+                                <span className="text-[9px] font-mono-data text-muted-foreground block mt-1 uppercase tracking-wider">Calibration Factor</span>
+                              </div>
+
+                              <div className="rounded-3xl border border-border bg-background p-5 flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Geopolitical Shift</div>
+                                  <div className="mt-2 text-2xl font-semibold text-foreground">{riskScore}%</div>
+                                  <span className="text-[9px] font-mono-data text-muted-foreground block mt-1 uppercase tracking-wider">Shift Intensity</span>
+                                </div>
+                                <div className="relative h-14 w-14 flex-shrink-0">
+                                  <svg className="h-full w-full -rotate-90">
+                                    <circle cx="28" cy="28" r="23" fill="none" stroke="var(--border)" strokeWidth="3.5" />
+                                    <circle 
+                                      cx="28" 
+                                      cy="28" 
+                                      r="23" 
+                                      fill="none" 
+                                      stroke={riskScore > 70 ? "var(--destructive)" : riskScore > 40 ? "var(--primary)" : "var(--accent-cyan)"} 
+                                      strokeWidth="3.5" 
+                                      strokeDasharray={2 * Math.PI * 23} 
+                                      strokeDashoffset={2 * Math.PI * 23 * (1 - riskScore / 100)} 
+                                      strokeLinecap="round"
+                                      className="transition-all duration-1000 ease-out"
+                                    />
+                                  </svg>
+                                  <span className="absolute inset-0 flex items-center justify-center font-mono-data text-[9px] font-bold">
+                                    {riskScore > 70 ? "HIGH" : riskScore > 40 ? "MED" : "LOW"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="rounded-3xl border border-border bg-background p-5 mt-6">
+                              <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-3">
+                                Calibration Calibration: Scenario vs History
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 text-xs border-b border-border pb-2 mb-2 font-mono-data text-muted-foreground uppercase tracking-wider">
+                                <div>Parameter</div>
+                                <div>Your Scenario</div>
+                                <div>Historical Match</div>
+                              </div>
+                              <div className="space-y-3.5 text-xs">
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="font-semibold text-foreground">Defense Shift</div>
+                                  <div className="text-[var(--primary)] font-semibold">{parsePercentageFromScenario(input, "defense")}</div>
+                                  <div className="text-muted-foreground truncate">{historicalMatches[0]?.defense_trend || "N/A"}</div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="font-semibold text-foreground">Emissions / Energy</div>
+                                  <div className="text-[var(--accent-cyan)] font-semibold">{parsePercentageFromScenario(input, "subsidy")}</div>
+                                  <div className="text-muted-foreground truncate">{historicalMatches[0]?.emissions_trend || "N/A"}</div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="font-semibold text-foreground">Key Jurisdiction</div>
+                                  <div className="text-foreground truncate">{getCountriesFromScenario(input)[0] || "Global"}</div>
+                                  <div className="text-muted-foreground font-semibold truncate">{historicalMatches[0]?.country || "N/A"} ({historicalMatches[0]?.period || "N/A"})</div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -506,18 +785,24 @@ function SimulatorPage() {
                               </p>
                             </div>
 
-                            <div className="rounded-3xl border border-border bg-background p-4">
-                              <div className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
-                                Historical matches
+                            <div className="rounded-3xl border border-border bg-background p-5">
+                              <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-4">
+                                Historical Precedent Timeline
                               </div>
-                              <div className="mt-3 space-y-3">
-                                {historicalMatches.slice(0, 3).map((match) => (
-                                  <div key={`${match.country}-${match.period}`} className="rounded-2xl border border-border bg-card p-3">
-                                    <div className="text-sm font-semibold text-foreground">{match.country}</div>
-                                    <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mt-1">{match.period}</div>
-                                    <div className="mt-2 text-sm text-foreground">
-                                      Similarity: {(match.similarity * 100).toFixed(1)}%
+                              <div className="relative border-l border-border pl-6 ml-3 space-y-6">
+                                {historicalMatches.slice(0, 3).map((match, idx) => (
+                                  <div key={`${match.country}-${match.period}`} className="relative group">
+                                    <div className="absolute -left-[31px] top-1.5 h-3 w-3 rounded-full border-2 border-background" style={{ backgroundColor: ["var(--primary)", "var(--accent-cyan)", "var(--accent-violet)"][idx % 3] }} />
+                                    <div className="flex items-center justify-between text-xs font-mono-data text-muted-foreground uppercase tracking-wider">
+                                      <span>{match.period}</span>
+                                      <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-foreground font-semibold">
+                                        {(match.similarity * 100).toFixed(0)}% Similarity
+                                      </span>
                                     </div>
+                                    <div className="mt-1 font-display text-base font-semibold text-foreground leading-snug">{match.country}</div>
+                                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                      Grounded baseline for emissions outputs and geopolitical shifts during this epoch.
+                                    </p>
                                   </div>
                                 ))}
                               </div>
@@ -525,32 +810,49 @@ function SimulatorPage() {
 
                             <div className="grid gap-4">
                               {memoSections.map((section) => (
-                                <Card key={section.title} className="border-border bg-background p-4 shadow-sm">
-                                  <div className="text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                                    {section.title}
+                                <Card key={section.title} className="relative group/section border-border bg-background p-4 shadow-sm">
+                                  <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground font-mono-data">
+                                      {section.title}
+                                    </div>
+                                    <button 
+                                      onClick={() => handleSpeakSection(section.body)}
+                                      className={`p-1 rounded hover:bg-muted transition-colors cursor-pointer ${speakingSection === section.body ? "text-primary" : "text-muted-foreground opacity-0 group-hover/section:opacity-100"}`}
+                                      title={speakingSection === section.body ? "Stop reading" : "Read section aloud"}
+                                    >
+                                      <Volume2 className="h-3 w-3" />
+                                    </button>
                                   </div>
                                   <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground">
-                                    {section.body}
+                                    {renderBodyWithCitations(section.body, historicalMatches)}
                                   </div>
                                 </Card>
                               ))}
                             </div>
 
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-2.5">
                               {saving && (
-                                <div className="rounded-2xl border border-border bg-blue-50 p-4 text-blue-700 flex items-center gap-2">
+                                <div className="rounded-2xl border border-border bg-blue-50/50 p-4 text-blue-700 dark:text-blue-300 flex items-center gap-2">
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                   <span className="text-sm font-medium">Saving memo to drafts...</span>
                                 </div>
                               )}
                               {savedBriefId && !saving && (
-                                <div className="rounded-2xl border border-border bg-green-50 p-4 text-green-700 flex items-center gap-2">
+                                <div className="rounded-2xl border border-border bg-green-50/50 p-4 text-green-700 dark:text-green-300 flex items-center gap-2">
                                   <Check className="h-4 w-4" />
-                                  <span className="text-sm font-medium">Saved to Past Drafts</span>
+                                  <span className="text-sm font-medium font-mono-data text-xs">Saved to Past Drafts (ID: {savedBriefId.slice(0, 8)})</span>
                                 </div>
                               )}
-                              <Button onClick={downloadBrief} variant="outline" className="w-full gap-2">
-                                <Download className="h-4 w-4" /> Download Brief (.txt)
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button onClick={downloadBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
+                                  <Download className="h-4 w-4" /> Download (.txt)
+                                </Button>
+                                <Button onClick={downloadPdfBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
+                                  <Download className="h-4 w-4" /> Export (.pdf)
+                                </Button>
+                              </div>
+                              <Button onClick={generateShareLink} variant="secondary" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
+                                <Share2 className="h-4 w-4" /> Copy Shareable Link
                               </Button>
                             </div>
                           </div>

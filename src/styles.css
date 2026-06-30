@@ -108,8 +108,48 @@
   --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 4px 14px -8px rgba(0,0,0,0.4);
 }
 
+.forest {
+  --radius: 0.5rem;
+  --background: #f1f5f2;       /* very soft pale green-gray */
+  --surface: #e4ebe6;          /* soft sage-tint surface */
+  --card: #ffffff;
+  --card-foreground: #14241b;
+  --popover: #ffffff;
+  --popover-foreground: #14241b;
+  --foreground: #14241b;
+
+  --primary: #1b4d3e;          /* deep forest green */
+  --primary-foreground: #ffffff;
+  --secondary: #d3ede0;        /* soft pale mint */
+  --secondary-foreground: #14241b;
+  --muted: #d3ede0;
+  --muted-foreground: #2d6a4f;
+  --accent: #52b788;           /* vibrant green accent */
+  --accent-foreground: #14241b;
+  --destructive: #b23a2a;
+  --destructive-foreground: #ffffff;
+  --border: #c7ebd8;
+  --input: #c7ebd8;
+  --ring: #1b4d3e;
+
+  /* Aliased accent palette */
+  --accent-cyan: #52b788;      /* emerald accent */
+  --accent-violet: #1b4d3e;    /* deep forest */
+  --accent-green: #2d6a4f;     /* sage green */
+  --accent-amber: #d3ede0;     /* pale mint */
+
+  --paper-tint: #d3ede0;
+  --shadow-elegant: 0 1px 2px rgba(20,36,27,0.05), 0 8px 24px -12px rgba(27,77,62,0.22);
+  --shadow-soft: 0 1px 2px rgba(20,36,27,0.04), 0 4px 14px -8px rgba(20,36,27,0.10);
+}
+
 @layer base {
   * { border-color: var(--color-border); }
+
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 
   html, body {
     background-color: var(--color-background);
