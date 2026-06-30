@@ -97,7 +97,7 @@ function normalizePolicyImpactBrief(value: unknown) {
 }
 
 function mapPolicy(policy: PolicyFeed): PolicyItem {
-  const category = getPolicyCategory(policy.title, policy.summary);
+  const category = getPolicyCategory(policy.title || "", policy.summary);
   const publishedAt = policy.published_date || policy.created_at;
   const date = publishedAt
     ? new Date(publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })

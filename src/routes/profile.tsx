@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FileText, LogOut, Mail, MapPin, ShieldCheck, Clock, ArrowRight, Download, Pencil, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,73 @@ function ProfilePage() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: briefs = [], isLoading: briefsLoading } = useBriefs();
   const { data: activity = [], isLoading: activityLoading } = useActivity();
+
+  // Signature Pad state & canvas handlers
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("analyst_signature");
+      if (saved) setSignatureImage(saved);
+    }
+  }, []);
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    ctx.strokeStyle = "currentColor";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+
+    const rect = canvas.getBoundingClientRect();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    ctx.beginPath();
+    ctx.moveTo(clientX - rect.left, clientY - rect.top);
+    setIsDrawing(true);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    ctx.lineTo(clientX - rect.left, clientY - rect.top);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const saveSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL();
+    localStorage.setItem("analyst_signature", dataUrl);
+    setSignatureImage(dataUrl);
+    toast.success("Dossier Signature captured successfully!");
+  };
 
   async function logout() {
     await signOut();
@@ -210,7 +277,7 @@ function ProfilePage() {
                 className="grid h-20 w-20 place-items-center rounded-sm border border-border font-display text-3xl text-[var(--primary)]"
                 style={{ background: "color-mix(in oklab, var(--primary) 10%, transparent)" }}
               >
-                {displayName.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
+                {displayName.split(" ").map((p: string) => p[0]).slice(0, 2).join("").toUpperCase()}
               </div>
               <div>
                 <h1 className="font-display text-4xl font-medium leading-tight text-foreground sm:text-5xl">
@@ -227,25 +294,28 @@ function ProfilePage() {
                 <li className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" />{clearance}</li>
                 <li className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" />Joined {joined}</li>
               </ul>
-              
-              <div className="rounded-xl border border-border bg-card/60 p-3.5 max-w-sm">
+                         <div className="rounded-xl border border-border bg-card/60 p-3.5 max-w-sm">
                 <span className="font-mono-data text-[8px] uppercase tracking-wider text-muted-foreground block mb-2">Digital Signature Dossier Certificate</span>
-                <div className="h-10 border border-dashed border-border/80 rounded-md flex items-center justify-center bg-background p-2">
-                  <span className="text-3xl text-foreground select-none" style={{ fontFamily: "'Monsieur La Doulaise', cursive" }}>{displayName}</span>
+                <div className="h-12 border border-dashed border-border/80 rounded-md flex items-center justify-center bg-background p-2 overflow-hidden">
+                  {signatureImage ? (
+                    <img src={signatureImage} alt="Analyst Signature" className="h-10 object-contain dark:invert" />
+                  ) : (
+                    <span className="text-3xl text-foreground select-none" style={{ fontFamily: "'Monsieur La Doulaise', cursive" }}>{displayName}</span>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex gap-2 md:justify-self-end">
                         <Button onClick={beginEdit} variant="outline" className="h-10 rounded-sm border-border font-mono-data text-[11px] uppercase tracking-[0.2em]">
-                          <Pencil className="h-3.5 w-3.5" /> Edit
+                           <Pencil className="h-3.5 w-3.5" /> Edit
                         </Button>
 
                         <Dialog open={editing} onOpenChange={(o) => setEditing(o)}>
                           <DialogContent>
                             <DialogHeader>
                               <DialogTitle>Edit profile</DialogTitle>
-                              <DialogDescription>Update your name, organisation and role. Changes persist across logins.</DialogDescription>
+                              <DialogDescription>Update your name, organisation, role and signature key.</DialogDescription>
                             </DialogHeader>
 
                             <div className="mt-4 grid gap-3">
@@ -262,6 +332,27 @@ function ProfilePage() {
                                   <option key={k} value={k}>{ROLE_LABELS[k]}</option>
                                 ))}
                               </select>
+
+                              <label className="text-sm text-muted-foreground mt-2">Dossier Signature Certificate (Draw signature below)</label>
+                              <div className="border border-border rounded-xl p-2 bg-background flex flex-col items-center">
+                                <canvas
+                                  ref={canvasRef}
+                                  width={360}
+                                  height={80}
+                                  className="border border-dashed border-border/80 bg-background/50 cursor-crosshair max-w-full"
+                                  onMouseDown={startDrawing}
+                                  onMouseMove={draw}
+                                  onMouseUp={stopDrawing}
+                                  onMouseLeave={stopDrawing}
+                                  onTouchStart={startDrawing}
+                                  onTouchMove={draw}
+                                  onTouchEnd={stopDrawing}
+                                />
+                                <div className="flex gap-2 mt-2 w-full justify-between">
+                                  <Button size="sm" variant="ghost" className="text-xs h-7 px-2" onClick={clearSignature}>Clear Pad</Button>
+                                  <Button size="sm" variant="outline" className="text-xs h-7 px-2" onClick={saveSignature}>Capture Draw</Button>
+                                </div>
+                              </div>
                             </div>
 
                             <DialogFooter className="mt-4">
