@@ -44,16 +44,24 @@ function formatRelevantMatchEntry(a: RelevantAnalogy): string {
 }
 
 function buildPrompt(relevantMatchesText: string, historicalCasesText: string, userScenario: string): string {
-  return `You are a strategic policy analyst. Analyze ONLY policy scenarios. Reject off-topic inputs.
+  return `You are an elite Lead Policy Intelligence Analyst and Technical Advisor. Your job is to analyze the user's policy scenario by grounding it rigorously in the provided historical analogies.
 
-RULES:
-- Ground analysis in the historical analogies below. Scale projections to match the user's specific percentages/numbers.
-- Contrast user inputs against historical baselines (e.g. user says +15% vs historical +5% = 3x acceleration).
-- Be direct and concise. No filler, no preamble, no repetition. Every sentence must add new information.
-- Each section: max 80 words. Total memo: under 500 words.
-- State uncertainty explicitly when similarity is low.
+CALIBRATION & MATHEMATICAL GROUNDING RULES (MANDATORY):
+1. **Calculate the Spending Scale Factor**: 
+   - Parse the defense budget percentage change specified in the USER SCENARIO (e.g. +20% shift).
+   - Identify the defense budget percentage change in the primary HISTORICAL MATCH (e.g. +5% shift).
+   - Divide the user shift by the historical shift to calculate the exact Scale Factor: (User Shift) / (Historical Shift) = [Scale Factor]x.
+   - For example: User (+15%) / Historical (+5%) = 3.0x acceleration. Or User (-10%) / Historical (-20%) = 0.5x reduction.
+2. **Scale Projected Outputs**:
+   - Apply this Scale Factor directly to calculate the projected CO2 emissions change.
+   - For example, if the historical precedent experienced a +4% emissions growth under a 1.0x baseline, and your calculated Scale Factor is 3.0x, project a precise, data-grounded +12% emissions shift.
+3. **Include Math Calibration Lines**:
+   - In each of the trajectory sections, you MUST output a blockquote detailing the calculation:
+     > **Precision Calibration**: Scale Factor of [Scale Factor]x (User proposed shift of [User]% vs Historical precedent shift of [Historical]%).
+4. **Reject Out-of-Scope Inputs**:
+   - If the input does not describe a sovereign military, energy, or climate policy reallocation scenario, return a polite error message stating the scenario is out of scope.
 
-HISTORICAL MATCHES:
+HISTORICAL MATCHES (RETRIEVED CORPUS):
 ${relevantMatchesText}
 
 HISTORICAL CASES:
@@ -62,13 +70,18 @@ ${historicalCasesText}
 USER SCENARIO:
 ${userScenario}
 
-Generate a memo in Markdown with these sections:
-1. **Scenario Summary** — What changed, with exact percentages.
-2. **Emissions Trajectory** — Projected CO2 impact, scaled to the user's numbers.
-3. **Defence Industrial Effects** — Sector implications at the stated scale.
-4. **Economic Spillovers** — Fiscal/trade consequences of the reallocation.
-5. **Confidence** — High/Medium/Low with one-line justification citing analogy similarity.
-6. **Historical Match Analysis** — Why these analogies apply and how percentages compare.`;
+Generate the Foresight Memorandum in clean Markdown with the following exact section headers:
+1. **Scenario Summary** — Outline the policy scenario details and exact budget reallocation percentages.
+2. **Emissions Trajectory** — Project the CO2 emissions shift in Million Tonnes (Mt) and percent changes, explicitly displaying your **Precision Calibration** math.
+3. **Defence Industrial Effects** — Explain the manufacturing and supply chain impact, scaled proportionally using the Scale Factor.
+4. **Economic Spillovers** — Detail fiscal, sovereign debt, trade, and economic reallocations at the stated scale.
+5. **Confidence Evaluation** — State High/Medium/Low confidence with an analytical margin of error, citing the similarity scores of the analogies.
+6. **Precedent Calibration Matrix** — A markdown table comparing:
+   | Dimension | User Scenario | Precedent Baseline | Variance (User/Precedent) |
+   | --- | --- | --- | --- |
+   | Defense Budget | [User proposed shift] | [Precedent trend] | [Scale Factor]x |
+   | Emissions Trend | [Scaled Project %] | [Precedent trend] | [Scale Factor]x |
+   | Prime Analogy | — | [Country] ([Period]) | Similarity: [Score]% |`;
 }
 
 function computeConfidence(analogies: RelevantAnalogy[]): "High" | "Medium" | "Low" {
