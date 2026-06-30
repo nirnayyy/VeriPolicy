@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { FileText, Loader2, Download, Check, Share2, Volume2, BarChart3, Calendar } from "lucide-react";
 import { Navbar } from "@/components/navbar";
@@ -244,20 +244,32 @@ function SimulatorPage() {
 
   const riskScore = useMemo(() => calculateGeopoliticalRiskScore(input), [input]);
 
+  const typingIntervalRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (typingIntervalRef.current) clearInterval(typingIntervalRef.current);
+    };
+  }, []);
+
   const handleExampleClick = (exText: string) => {
-    if (isTypingExample || state === "loading") return;
+    if (state === "loading") return;
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+    }
     setIsTypingExample(true);
     setInput("");
     
     let currentIdx = 0;
-    const interval = setInterval(() => {
-      setInput((prev) => exText.slice(0, currentIdx + 1));
+    typingIntervalRef.current = setInterval(() => {
+      setInput(exText.slice(0, currentIdx + 1));
       currentIdx++;
       if (currentIdx >= exText.length) {
-        clearInterval(interval);
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
         setIsTypingExample(false);
       }
-    }, 15);
+    }, 12);
   };
 
   const chartCountries = useMemo(() => {
@@ -775,13 +787,19 @@ function SimulatorPage() {
                               </div>
                               <div className="relative h-14 w-14 flex-shrink-0">
                                 <svg className="h-full w-full -rotate-90">
+                                  <defs>
+                                    <linearGradient id="riskGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                      <stop offset="0%" stopColor="var(--primary)" />
+                                      <stop offset="100%" stopColor={riskScore > 70 ? "var(--destructive)" : "var(--accent-cyan)"} />
+                                    </linearGradient>
+                                  </defs>
                                   <circle cx="28" cy="28" r="23" fill="none" stroke="var(--border)" strokeWidth="3.5" />
                                   <circle 
                                     cx="28" 
                                     cy="28" 
                                     r="23" 
                                     fill="none" 
-                                    stroke={riskScore > 70 ? "var(--destructive)" : riskScore > 40 ? "var(--primary)" : "var(--accent-cyan)"} 
+                                    stroke="url(#riskGradient)" 
                                     strokeWidth="3.5" 
                                     strokeDasharray={2 * Math.PI * 23} 
                                     strokeDashoffset={2 * Math.PI * 23 * (1 - riskScore / 100)} 

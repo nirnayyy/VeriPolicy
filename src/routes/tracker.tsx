@@ -148,6 +148,7 @@ function TrackerPage() {
   const [filter, setFilter] = useState<Filter>("All");
   const [countryFilter, setCountryFilter] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selected, setSelected] = useState<PolicyItem | null>(null);
   const [policies, setPolicies] = useState<PolicyItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -156,6 +157,13 @@ function TrackerPage() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const handleSyncFeed = async () => {
     setSyncing(true);
@@ -260,9 +268,9 @@ function TrackerPage() {
     const matchesCountry = countryFilter === "All" || 
       a.headline.toLowerCase().includes(countryFilter.toLowerCase()) || 
       a.brief.what.toLowerCase().includes(countryFilter.toLowerCase());
-    const matchesSearch = !searchTerm.trim() || 
-      a.headline.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      a.brief.what.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !debouncedSearchTerm.trim() || 
+      a.headline.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
+      a.brief.what.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
     return matchesCategory && matchesCountry && matchesSearch;
   });
 

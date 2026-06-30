@@ -231,7 +231,7 @@ function ProfilePage() {
               <div className="rounded-xl border border-border bg-card/60 p-3.5 max-w-sm">
                 <span className="font-mono-data text-[8px] uppercase tracking-wider text-muted-foreground block mb-2">Digital Signature Dossier Certificate</span>
                 <div className="h-10 border border-dashed border-border/80 rounded-md flex items-center justify-center bg-background p-2">
-                  <span className="text-xl text-foreground font-semibold italic select-none" style={{ fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive" }}>{displayName}</span>
+                  <span className="text-3xl text-foreground select-none" style={{ fontFamily: "'Monsieur La Doulaise', cursive" }}>{displayName}</span>
                 </div>
               </div>
             </div>
