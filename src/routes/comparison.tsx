@@ -133,10 +133,15 @@ function ComparisonPage() {
       >
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="font-mono-data text-xs uppercase tracking-widest text-muted-foreground">Comparison Dashboard</div>
-            <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">Historical & present CO2 vs military expenditure</h1>
+            <div className="font-mono-data text-xs uppercase tracking-widest text-muted-foreground">
+              Comparison Dashboard
+            </div>
+            <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
+              CO₂ vs military expenditure analytics
+            </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Explore how strategic defence spending and emissions trajectories align across major economies. Use the controls to compare countries and focus on a shared historic-to-present window.
+              Multi-series intelligence view across major economies — trend lines, rankings, correlation
+              indices, and normalized profiles in one workspace.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -247,12 +252,8 @@ function ComparisonPage() {
           </Card>
         </div>
 
-        <div className="mt-6 space-y-6">
-          <Card className="border-border bg-card shadow-sm">
-            <CardContent className="p-0">
-              <AnalyticsCharts countries={selectedCountries} yearRange={selectedRange} />
-            </CardContent>
-          </Card>
+        <div className="mt-8">
+          <AnalyticsCharts countries={selectedCountries} yearRange={selectedRange} />
         </div>
       </motion.div>
     </div>
