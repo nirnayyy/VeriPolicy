@@ -1,9 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { ArrowRight, FileText, ScrollText, Database, Globe2, ShieldCheck } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import {
+  ArrowRight,
+  FileText,
+  ScrollText,
+  Database,
+  Globe2,
+  ShieldCheck,
+  BarChart3,
+  Zap,
+  Activity,
+  TrendingUp,
+  Clock,
+  Sparkles,
+  ArrowUpRight,
+  Newspaper,
+  Target,
+  Radar,
+} from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useAuth } from "@/contexts/auth-provider";
+import { useCountUp, useInView } from "@/hooks/use-animations";
+import { fetchBriefs, fetchActivity } from "@/lib/supabase/dashboard";
+import { getPolicies } from "@/services/policyService";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -14,6 +36,10 @@ export const Route = createFileRoute("/home")({
   }),
   component: HomePage,
 });
+
+/* ═══════════════════════════════════════════════
+   SHARED COMPONENTS
+   ═══════════════════════════════════════════════ */
 
 const SCENARIOS = [
   "India increases defence spending by 15%, cuts fossil fuel subsidies by 20%…",
@@ -84,7 +110,480 @@ function GeometryBackdrop() {
   );
 }
 
-function HomePage() {
+/* ═══════════════════════════════════════════════
+   ANIMATED STAT CARD
+   ═══════════════════════════════════════════════ */
+
+function AnimatedStat({
+  label,
+  value,
+  suffix = "",
+  prefix = "",
+  icon: Icon,
+  delay = 0,
+}: {
+  label: string;
+  value: number;
+  suffix?: string;
+  prefix?: string;
+  icon: React.ElementType;
+  delay?: number;
+}) {
+  const { ref, inView } = useInView();
+  const { value: animatedValue } = useCountUp(value, {
+    enabled: inView,
+    duration: 2200,
+    decimals: value < 10 ? 1 : 0,
+  });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 24 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:shadow-[var(--shadow-elegant)] hover:-translate-y-0.5"
+    >
+      <div className="absolute -right-3 -top-3 h-16 w-16 rounded-full opacity-10" style={{ background: "var(--primary)" }} />
+      <div className="flex items-center gap-3">
+        <div
+          className="grid h-10 w-10 place-items-center rounded-xl transition-transform group-hover:scale-110"
+          style={{ background: "color-mix(in oklab, var(--primary) 12%, transparent)", color: "var(--primary)" }}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="font-mono-data text-[9px] uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+          <div className="font-display text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+            {prefix}{animatedValue}{suffix}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   LIVE PULSE DOT
+   ═══════════════════════════════════════════════ */
+
+function PulseDot({ color = "var(--accent-cyan)" }: { color?: string }) {
+  return (
+    <span className="relative flex h-2 w-2">
+      <span
+        className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+        style={{ background: color }}
+      />
+      <span
+        className="relative inline-flex h-2 w-2 rounded-full"
+        style={{ background: color }}
+      />
+    </span>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   QUICK ACTION CARD
+   ═══════════════════════════════════════════════ */
+
+function QuickActionCard({
+  title,
+  description,
+  icon: Icon,
+  to,
+  accentColor,
+  delay = 0,
+}: {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  to: string;
+  accentColor: string;
+  delay?: number;
+}) {
+  return (
+    <Reveal delay={delay}>
+      <Link to={to}>
+        <div className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:shadow-[var(--shadow-elegant)] hover:-translate-y-1 cursor-pointer">
+          {/* Hover gradient reveal */}
+          <div
+            className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            style={{ background: `linear-gradient(135deg, color-mix(in oklab, ${accentColor} 6%, transparent), transparent)` }}
+          />
+
+          <div className="relative">
+            <div
+              className="mb-4 grid h-12 w-12 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+              style={{ background: `color-mix(in oklab, ${accentColor} 12%, transparent)`, color: accentColor }}
+            >
+              <Icon className="h-6 w-6" />
+            </div>
+
+            <h3 className="font-display text-xl font-semibold text-foreground">{title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
+
+            <div className="mt-4 flex items-center gap-1.5 font-mono-data text-[11px] uppercase tracking-wider transition-colors group-hover:text-foreground" style={{ color: accentColor }}>
+              Open <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </div>
+          </div>
+        </div>
+      </Link>
+    </Reveal>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   RECENT BRIEF ROW
+   ═══════════════════════════════════════════════ */
+
+function BriefRow({ title, status, date, refId }: { title: string; status: string; date: string; refId: string }) {
+  const statusColors: Record<string, string> = {
+    Draft: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    "In Review": "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+    Published: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
+    Archived: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400",
+  };
+
+  return (
+    <div className="group flex items-center gap-4 rounded-xl px-4 py-3 transition-colors hover:bg-muted/40">
+      <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg" style={{ background: "color-mix(in oklab, var(--primary) 10%, transparent)" }}>
+        <FileText className="h-4 w-4" style={{ color: "var(--primary)" }} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium text-foreground">{title}</div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="font-mono-data text-[10px] text-muted-foreground">{refId}</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="font-mono-data text-[10px] text-muted-foreground">{date}</span>
+        </div>
+      </div>
+      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusColors[status] ?? statusColors.Draft}`}>
+        {status}
+      </span>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   POLICY PULSE TICKER ITEM
+   ═══════════════════════════════════════════════ */
+
+function PolicyPulseItem({ headline, category, time }: { headline: string; category: string; time: string }) {
+  const categoryColors: Record<string, string> = {
+    defence: "text-red-400",
+    climate: "text-emerald-400",
+    energy: "text-amber-400",
+    other: "text-blue-400",
+  };
+
+  return (
+    <div className="flex items-start gap-3 rounded-xl px-4 py-3 transition-colors hover:bg-muted/40">
+      <PulseDot color={category === "defence" ? "#f87171" : category === "climate" ? "#34d399" : category === "energy" ? "#fbbf24" : "#60a5fa"} />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm leading-snug text-foreground line-clamp-2">{headline}</div>
+        <div className="mt-1 flex items-center gap-2">
+          <span className={`font-mono-data text-[9px] uppercase tracking-wider ${categoryColors[category] ?? categoryColors.other}`}>
+            {category}
+          </span>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="font-mono-data text-[9px] text-muted-foreground">{time}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   SYSTEM HEALTH INDICATOR
+   ═══════════════════════════════════════════════ */
+
+function SystemHealthBar() {
+  const systems = [
+    { name: "Inference Engine", status: "operational" as const },
+    { name: "Vector DB", status: "operational" as const },
+    { name: "Policy Feed", status: "operational" as const },
+    { name: "Auth Service", status: "operational" as const },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      {systems.map((sys) => (
+        <div key={sys.name} className="flex items-center gap-2">
+          <PulseDot color={sys.status === "operational" ? "#34d399" : "#f87171"} />
+          <span className="font-mono-data text-[10px] uppercase tracking-wider text-muted-foreground">
+            {sys.name}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   AUTHENTICATED DASHBOARD
+   ═══════════════════════════════════════════════ */
+
+function IntelligenceDashboard() {
+  const { user } = useAuth();
+  const [briefs, setBriefs] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<any[]>([]);
+  const [loadingBriefs, setLoadingBriefs] = useState(true);
+  const [loadingPolicies, setLoadingPolicies] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchBriefs(user.id)
+      .then((b) => setBriefs(b))
+      .catch(() => {})
+      .finally(() => setLoadingBriefs(false));
+  }, [user]);
+
+  useEffect(() => {
+    getPolicies()
+      .then((p) => setPolicies(p))
+      .catch(() => {})
+      .finally(() => setLoadingPolicies(false));
+  }, []);
+
+  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Analyst";
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+  }, []);
+
+  const recentBriefs = briefs.slice(0, 4);
+  const recentPolicies = policies.slice(0, 5);
+  const activeDrafts = briefs.filter((b) => b.status === "Draft" || b.status === "In Review").length;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      {/* ── HEADER ── */}
+      <section className="relative overflow-hidden border-b border-border">
+        <div className="paper absolute inset-0 opacity-40" />
+        <div className="relative mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="font-mono-data text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+                Intelligence Operations Center
+              </div>
+              <h1 className="mt-2 font-display text-4xl font-medium tracking-tight text-foreground sm:text-5xl">
+                {greeting}, <span className="font-serif-italic" style={{ color: "var(--primary)" }}>{displayName}</span>.
+              </h1>
+              <p className="mt-3 max-w-lg text-base text-muted-foreground">
+                Your intelligence desk is active. All systems operational.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <SystemHealthBar />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── ANIMATED STATS BAR ── */}
+      <section className="mx-auto max-w-7xl px-5 sm:px-8 -mt-6 relative z-10">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <AnimatedStat label="Briefs Generated" value={briefs.length} icon={FileText} delay={0} />
+          <AnimatedStat label="Active Drafts" value={activeDrafts} icon={Target} delay={0.08} />
+          <AnimatedStat label="Policy Events" value={policies.length} icon={Newspaper} delay={0.16} />
+          <AnimatedStat label="Countries Indexed" value={20} icon={Globe2} delay={0.24} />
+        </div>
+      </section>
+
+      {/* ── MAIN GRID ── */}
+      <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          {/* LEFT: Quick Actions + Recent Briefs */}
+          <div className="space-y-6">
+            {/* Quick Action Cards */}
+            <div>
+              <div className="mb-4 font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Quick Actions</div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <QuickActionCard
+                  title="Scenario Simulator"
+                  description="Generate analyst-grade foresight memos from any policy scenario in under 2 seconds."
+                  icon={Zap}
+                  to="/simulator"
+                  accentColor="var(--primary)"
+                  delay={0}
+                />
+                <QuickActionCard
+                  title="Policy Tracker"
+                  description="Monitor live defence, climate, and energy policy developments across 47 jurisdictions."
+                  icon={Radar}
+                  to="/tracker"
+                  accentColor="var(--accent-cyan)"
+                  delay={0.06}
+                />
+                <QuickActionCard
+                  title="Data Comparison"
+                  description="Compare CO₂ emissions and military expenditure trends across nations and epochs."
+                  icon={BarChart3}
+                  to="/comparison"
+                  accentColor="var(--accent)"
+                  delay={0.12}
+                />
+                <QuickActionCard
+                  title="Analyst Dossier"
+                  description="View your credentials, performance metrics, archived drafts, and session controls."
+                  icon={ShieldCheck}
+                  to="/profile"
+                  accentColor="var(--primary)"
+                  delay={0.18}
+                />
+              </div>
+            </div>
+
+            {/* Recent Briefs */}
+            <Reveal delay={0.1}>
+              <Card className="border-border bg-card overflow-hidden">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" style={{ color: "var(--primary)" }} />
+                    <span className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Recent Briefs</span>
+                  </div>
+                  <Link to="/profile" className="font-mono-data text-[10px] uppercase tracking-wider hover:text-foreground transition-colors" style={{ color: "var(--primary)" }}>
+                    View All →
+                  </Link>
+                </div>
+                <div className="divide-y divide-border/40">
+                  {loadingBriefs ? (
+                    <div className="space-y-3 p-5">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-4">
+                          <div className="h-9 w-9 rounded-lg bg-muted animate-pulse" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-3 w-3/4 rounded bg-muted animate-pulse" />
+                            <div className="h-2.5 w-1/3 rounded bg-muted animate-pulse" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : recentBriefs.length > 0 ? (
+                    recentBriefs.map((brief) => (
+                      <BriefRow
+                        key={brief.id}
+                        title={brief.title}
+                        status={brief.status}
+                        refId={brief.ref_id}
+                        date={new Date(brief.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      />
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="grid h-14 w-14 place-items-center rounded-2xl" style={{ background: "color-mix(in oklab, var(--primary) 10%, transparent)" }}>
+                        <Sparkles className="h-7 w-7" style={{ color: "var(--primary)" }} />
+                      </div>
+                      <p className="mt-4 text-sm font-medium text-foreground">No briefs yet</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Open the Scenario Simulator to draft your first foresight memo.</p>
+                      <Link to="/simulator">
+                        <Button size="sm" className="mt-4 gap-1.5" style={{ background: "var(--primary)", color: "var(--primary-foreground)" }}>
+                          <Zap className="h-3.5 w-3.5" /> Start Drafting
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </Reveal>
+          </div>
+
+          {/* RIGHT SIDEBAR: Policy Pulse + Activity */}
+          <div className="space-y-6">
+            {/* Live Policy Pulse */}
+            <Reveal delay={0.08}>
+              <Card className="border-border bg-card overflow-hidden">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4" style={{ color: "var(--accent-cyan)" }} />
+                    <span className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Policy Pulse</span>
+                    <PulseDot />
+                  </div>
+                  <Link to="/tracker" className="font-mono-data text-[10px] uppercase tracking-wider hover:text-foreground transition-colors" style={{ color: "var(--accent-cyan)" }}>
+                    Full Feed →
+                  </Link>
+                </div>
+                <div className="max-h-[360px] overflow-y-auto divide-y divide-border/30">
+                  {loadingPolicies ? (
+                    <div className="space-y-3 p-5">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className="mt-1 h-2 w-2 rounded-full bg-muted animate-pulse" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-3 w-full rounded bg-muted animate-pulse" />
+                            <div className="h-2.5 w-1/4 rounded bg-muted animate-pulse" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : recentPolicies.length > 0 ? (
+                    recentPolicies.map((p: any, idx: number) => (
+                      <PolicyPulseItem
+                        key={p.id || idx}
+                        headline={p.title || p.headline || "Untitled policy event"}
+                        category={p.category || "other"}
+                        time={p.published_date ? new Date(p.published_date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Recent"}
+                      />
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+                      <Newspaper className="h-8 w-8 text-muted-foreground/40" />
+                      <p className="mt-3 text-sm text-muted-foreground">No policy events yet. Sync the live feed from the Policy Tracker.</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </Reveal>
+
+            {/* Platform Capabilities */}
+            <Reveal delay={0.14}>
+              <Card className="border-border bg-card p-5">
+                <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-4">Platform Capabilities</div>
+                <div className="space-y-3">
+                  {[
+                    { icon: Database, label: "20 historical analogies indexed", color: "var(--primary)" },
+                    { icon: Globe2, label: "47 jurisdictions monitored", color: "var(--accent-cyan)" },
+                    { icon: TrendingUp, label: "RAG-grounded precision scoring", color: "var(--accent)" },
+                    { icon: Clock, label: "Sub-2 second memo generation", color: "var(--primary)" },
+                  ].map((cap) => (
+                    <div key={cap.label} className="flex items-center gap-3">
+                      <div className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg" style={{ background: `color-mix(in oklab, ${cap.color} 12%, transparent)`, color: cap.color }}>
+                        <cap.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm text-muted-foreground">{cap.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <Footer />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   MARKETING PAGE (UNAUTHENTICATED)
+   ═══════════════════════════════════════════════ */
+
+function MarketingPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -92,8 +591,6 @@ function HomePage() {
       {/* ░░ HERO ░░ */}
       <section className="relative overflow-hidden">
         <GeometryBackdrop />
-
-        {/* Floating geometric ornaments */}
         <div className="pointer-events-none absolute inset-0">
           <div className="float-slow absolute left-[6%] top-[18%] h-24 w-24 rounded-full border border-[var(--primary)]/30" style={{ ['--r' as any]: '0deg' }} />
           <div className="float-slow absolute right-[8%] top-[12%] h-16 w-16 rotate-45 border border-[var(--accent)]/60" style={{ ['--r' as any]: '45deg', animationDelay: '-3s' }} />
@@ -125,14 +622,14 @@ function HomePage() {
               </p>
 
               <div className="mt-9 flex flex-wrap items-center gap-3">
-                <Link to="/simulator">
+                <Link to="/signup">
                   <Button size="lg" className="h-11 gap-2 rounded-sm bg-[var(--primary)] px-6 font-mono-data text-[11px] uppercase tracking-[0.2em] text-[var(--primary-foreground)] shadow-[var(--shadow-elegant)] hover:bg-[color-mix(in_oklab,var(--primary)_88%,black)]">
-                    Open Simulator <ArrowRight className="h-4 w-4" />
+                    Get Started <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link to="/tracker">
+                <Link to="/login">
                   <Button size="lg" variant="outline" className="h-11 rounded-sm border-[var(--primary)] px-6 font-mono-data text-[11px] uppercase tracking-[0.2em] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)]">
-                    View Policy Tracker
+                    Sign In
                   </Button>
                 </Link>
               </div>
@@ -248,7 +745,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* ░░ DESKS / DOMAINS ░░ */}
+      {/* ░░ CAPABILITIES ░░ */}
       <section className="relative border-t border-border bg-[var(--surface)] py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-14">
@@ -309,7 +806,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* ░░ DISPATCH / CTA ░░ */}
+      {/* ░░ CTA ░░ */}
       <section className="relative overflow-hidden border-t border-border py-28">
         <div className="paper absolute inset-0 opacity-60" />
         <div className="relative mx-auto max-w-3xl px-6 text-center">
@@ -322,33 +819,142 @@ function HomePage() {
             VeriPolicy is in active service across policy desks. Open the Scenario Simulator to draft your first foresight memo.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/simulator">
+            <Link to="/signup">
               <Button size="lg" className="h-11 gap-2 rounded-sm bg-[var(--primary)] px-7 font-mono-data text-[11px] uppercase tracking-[0.2em] text-[var(--primary-foreground)] shadow-[var(--shadow-elegant)]">
-                Begin Drafting <ArrowRight className="h-4 w-4" />
+                Get Started <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/tracker">
+            <Link to="/login">
               <Button size="lg" variant="ghost" className="h-11 rounded-sm font-mono-data text-[11px] uppercase tracking-[0.2em] text-[var(--primary)] hover:bg-transparent hover:underline">
-                Read Today's Tracker
+                Sign In
               </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-border bg-[var(--surface)]">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-center md:flex-row md:text-left">
-          <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-            VeriPolicy · Office of Policy Intelligence
-          </div>
-          <div className="font-serif-italic text-sm text-foreground/70">
-            Issued under the authority of the Foresight Desk · 2026
-          </div>
-          <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-            Llama 3.3 70B · Groq Inference
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
+}
+
+/* ═══════════════════════════════════════════════
+   PROFESSIONAL FOOTER
+   ═══════════════════════════════════════════════ */
+
+function Footer() {
+  return (
+    <footer className="border-t border-border bg-[var(--surface)]">
+      <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Brand */}
+          <div>
+            <div className="flex items-center gap-2.5">
+              <svg viewBox="0 0 40 40" className="h-7 w-7 text-[var(--primary)]" aria-hidden>
+                <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" strokeWidth="0.8" />
+                <circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 2" />
+                <path d="M20 6 L24 20 L20 34 L16 20 Z" fill="currentColor" opacity="0.85" />
+                <circle cx="20" cy="20" r="2.4" fill="var(--background)" />
+              </svg>
+              <span className="font-display text-lg font-semibold text-foreground">VeriPolicy</span>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              AI-powered policy intelligence for analysts who cannot afford to guess.
+            </p>
+          </div>
+
+          {/* Product */}
+          <div>
+            <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-3">Product</div>
+            <div className="space-y-2">
+              {[
+                { label: "Scenario Simulator", to: "/simulator" },
+                { label: "Policy Tracker", to: "/tracker" },
+                { label: "Data Comparison", to: "/comparison" },
+                { label: "Analyst Dossier", to: "/profile" },
+              ].map((link) => (
+                <Link key={link.to} to={link.to} className="block text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Company */}
+          <div>
+            <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-3">Company</div>
+            <div className="space-y-2">
+              {[
+                { label: "About Us", to: "/about" },
+                { label: "Terms of Service", to: "/terms" },
+              ].map((link) => (
+                <Link key={link.to} to={link.to} className="block text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Powered By */}
+          <div>
+            <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground mb-3">Powered By</div>
+            <div className="flex flex-wrap gap-2">
+              {["Gemini", "Groq", "SIPRI", "OWID", "Supabase"].map((tech) => (
+                <span
+                  key={tech}
+                  className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 font-mono-data text-[10px] uppercase tracking-wider text-muted-foreground"
+                >
+                  {tech}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-8 sm:flex-row">
+          <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            © {new Date().getFullYear()} VeriPolicy · Office of Policy Intelligence
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <span className="font-mono-data text-[10px] uppercase tracking-wider text-muted-foreground">
+              All systems operational
+            </span>
+          </div>
+          <div className="font-mono-data text-[10px] text-muted-foreground">
+            v2.0.0
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   ROUTER SWITCH
+   ═══════════════════════════════════════════════ */
+
+function HomePage() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative h-10 w-10">
+            <div className="absolute inset-0 animate-ping rounded-full opacity-25" style={{ background: "var(--primary)" }} />
+            <div className="relative h-10 w-10 rounded-full grid place-items-center" style={{ background: "color-mix(in oklab, var(--primary) 15%, transparent)" }}>
+              <Zap className="h-5 w-5" style={{ color: "var(--primary)" }} />
+            </div>
+          </div>
+          <span className="font-mono-data text-[10px] uppercase tracking-wider text-muted-foreground">Initializing Intelligence Desk…</span>
+        </div>
+      </div>
+    );
+  }
+
+  return user ? <IntelligenceDashboard /> : <MarketingPage />;
 }
