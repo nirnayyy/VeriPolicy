@@ -68,7 +68,7 @@ export function WorldMap({
     <div className="w-full aspect-[2/1] md:aspect-[2.5/1] lg:aspect-[2/1] dark:bg-black bg-white rounded-lg relative font-sans overflow-hidden">
       <img
         src={`data:image/svg+xml;utf8,${encodeURIComponent(svgMap)}`}
-        className="h-full w-full [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)] pointer-events-none select-none object-cover"
+        className="h-full w-full [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)] pointer-events-none select-none object-cover transform scale-[1.35] translate-y-[6%] origin-center transition-all duration-300"
         alt="world map"
         height="495"
         width="1056"
@@ -77,7 +77,7 @@ export function WorldMap({
       <svg
         ref={svgRef}
         viewBox="0 0 800 400"
-        className="w-full h-full absolute inset-0 pointer-events-auto select-none"
+        className="w-full h-full absolute inset-0 pointer-events-auto select-none transform scale-[1.35] translate-y-[6%] origin-center transition-all duration-300"
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>
