@@ -13,6 +13,8 @@ import { ROLE_LABELS } from "@/lib/supabase/types";
 import { formatActivityTime, formatRelativeTime } from "@/lib/format-time";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
@@ -20,19 +22,7 @@ export const Route = createFileRoute("/profile")({
       { name: "description", content: "Analyst dossier, past foresight drafts, and session controls." },
     ],
   }),
-  beforeLoad: async () => {
-    // Check if user is authenticated before loading route
-    if (!isSupabaseConfigured()) {
-      throw redirect({ to: "/login" });
-    }
-    
-    const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user) {
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: ProfilePage,
 });
 

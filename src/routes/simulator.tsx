@@ -13,27 +13,16 @@ import { fetchSimulationHistory, generateForesightMemo } from "@/services/simula
 import { createBrief } from "@/lib/supabase/dashboard";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import { toast } from "sonner";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/simulator")({
   head: () => ({
     meta: [
       { title: "Scenario Simulator — VeriPolicy" },
-      { name: "description", content: "Generate analyst-grade foresight memos from policy scenarios." },
+      { name: "description", content: "Simulate defense spending and carbon reallocations dynamically." },
     ],
   }),
-  beforeLoad: async () => {
-    // Check if user is authenticated before loading route
-    if (!isSupabaseConfigured()) {
-      throw redirect({ to: "/login" });
-    }
-    
-    const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user) {
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: SimulatorPage,
 });
 

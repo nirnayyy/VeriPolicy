@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export const Route = createFileRoute("/tracker")({
   head: () => ({
     meta: [
@@ -19,19 +21,7 @@ export const Route = createFileRoute("/tracker")({
       { name: "description", content: "Live policy news from Reuters and AP with AI-generated Impact Briefs." },
     ],
   }),
-  beforeLoad: async () => {
-    // Check if user is authenticated before loading route
-    if (!isSupabaseConfigured()) {
-      throw redirect({ to: "/login" });
-    }
-    
-    const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user) {
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: TrackerPage,
 });
 

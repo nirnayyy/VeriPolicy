@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
+import { requireAuth } from "@/lib/auth-guard";
+
 export const Route = createFileRoute("/comparison")({
   head: () => ({
     meta: [
@@ -16,17 +18,7 @@ export const Route = createFileRoute("/comparison")({
       { name: "description", content: "Compare CO2 and military expenditure trends with historic and present context." },
     ],
   }),
-  beforeLoad: async () => {
-    if (!isSupabaseConfigured()) {
-      throw redirect({ to: "/login" });
-    }
-
-    const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-      throw redirect({ to: "/login" });
-    }
-  },
+  beforeLoad: requireAuth,
   component: ComparisonPage,
 });
 
