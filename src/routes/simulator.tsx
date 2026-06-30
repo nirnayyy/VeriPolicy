@@ -28,6 +28,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { fetchSimulationHistory, generateForesightMemo } from "@/services/simulatorService";
 import { createBrief } from "@/lib/supabase/dashboard";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
+import { WorldMap } from "@/components/ui/map";
 import { toast } from "sonner";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -235,6 +236,37 @@ function SimulatorPage() {
   const [wizardAmount, setWizardAmount] = useState(15);
   const [wizardEnergySource, setWizardEnergySource] = useState("fossil fuel subsidies");
   const [wizardOffsetAmount, setWizardOffsetAmount] = useState(20);
+
+  const mapDots = useMemo(() => {
+    return [
+      {
+        start: { lat: 38.9072, lng: -77.0369, label: "United States" },
+        end: { lat: 51.1657, lng: 10.4515, label: "Germany" },
+      },
+      {
+        start: { lat: 55.3781, lng: -3.4360, label: "United Kingdom" },
+        end: { lat: 60.1282, lng: 18.6435, label: "Sweden" },
+      },
+      {
+        start: { lat: 20.5937, lng: 78.9629, label: "India" },
+        end: { lat: 35.8617, lng: 104.1954, label: "China" },
+      },
+      {
+        start: { lat: 23.8859, lng: 45.0792, label: "Saudi Arabia" },
+        end: { lat: 20.5937, lng: 78.9629, label: "India" },
+      },
+    ];
+  }, []);
+
+  const handleMapPointClick = (label: string) => {
+    const matchedCountry = AVAILABLE_ANALYTICS_COUNTRIES.find(
+      (c) => c.toLowerCase() === label.toLowerCase()
+    );
+    if (matchedCountry) {
+      setWizardCountry(matchedCountry);
+      toast.info(`${matchedCountry} selected in Guided Builder`);
+    }
+  };
 
   const handleSpeakSection = (text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -558,11 +590,11 @@ function SimulatorPage() {
       const supabase = getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
-        const { data: profile } = await supabase
+        const { data: profile } = (await supabase
           .from("profiles")
           .select("full_name")
           .eq("id", session.user.id)
-          .maybeSingle();
+          .maybeSingle()) as any;
         if (profile?.full_name) {
           doc.setFont("Courier", "bold");
           doc.setTextColor(20, 20, 20);
@@ -1102,32 +1134,15 @@ function SimulatorPage() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                 </span>
               </div>
-              <div className="border border-border rounded-xl bg-background/50 p-2 flex items-center justify-center min-h-[160px]">
-                <svg className="w-full h-[140px]" viewBox="0 0 200 100">
-                  <rect x="10" y="20" width="40" height="24" rx="4" fill={wizardCountry === "United States" ? "var(--primary)" : "var(--muted)"} opacity={wizardCountry === "United States" ? 0.9 : 0.4} className="cursor-pointer transition-all animate-pulse" onClick={() => { setWizardCountry("United States"); if (guidedMode) toast.info("USA selected in Builder"); }} />
-                  <text x="30" y="34" textAnchor="middle" className="font-mono-data text-[7px] fill-foreground" pointerEvents="none">USA</text>
-
-                  <rect x="75" y="15" width="20" height="15" rx="3" fill={wizardCountry === "Germany" ? "var(--primary)" : "var(--muted)"} opacity={wizardCountry === "Germany" ? 0.9 : 0.4} className="cursor-pointer transition-all" onClick={() => { setWizardCountry("Germany"); if (guidedMode) toast.info("Germany selected in Builder"); }} />
-                  <text x="85" y="24" textAnchor="middle" className="font-mono-data text-[6px] fill-foreground" pointerEvents="none">GER</text>
-
-                  <rect x="75" y="5" width="20" height="10" rx="3" fill={wizardCountry === "Sweden" ? "var(--primary)" : "var(--muted)"} opacity={wizardCountry === "Sweden" ? 0.9 : 0.4} className="cursor-pointer transition-all" onClick={() => { setWizardCountry("Sweden"); if (guidedMode) toast.info("Sweden selected in Builder"); }} />
-                  <text x="85" y="12" textAnchor="middle" className="font-mono-data text-[6px] fill-foreground" pointerEvents="none">SWE</text>
-
-                  <rect x="62" y="10" width="12" height="12" rx="2" fill={wizardCountry === "United Kingdom" ? "var(--primary)" : "var(--muted)"} opacity={wizardCountry === "United Kingdom" ? 0.9 : 0.4} className="cursor-pointer transition-all" onClick={() => { setWizardCountry("United Kingdom"); if (guidedMode) toast.info("UK selected in Builder"); }} />
-                  <text x="68" y="18" textAnchor="middle" className="font-mono-data text-[6px] fill-foreground" pointerEvents="none">UK</text>
-
-                  <rect x="110" y="45" width="30" height="18" rx="4" fill={wizardCountry === "India" ? "var(--primary)" : "var(--muted)"} opacity={wizardCountry === "India" ? 0.9 : 0.4} className="cursor-pointer transition-all" onClick={() => { setWizardCountry("India"); if (guidedMode) toast.info("India selected in Builder"); }} />
-                  <text x="125" y="56" textAnchor="middle" className="font-mono-data text-[7px] fill-foreground" pointerEvents="none">IND</text>
-
-                  <rect x="142" y="25" width="38" height="22" rx="4" fill={wizardCountry === "China" ? "var(--primary)" : "var(--muted)"} opacity={wizardCountry === "China" ? 0.9 : 0.4} className="cursor-pointer transition-all" onClick={() => { setWizardCountry("China"); if (guidedMode) toast.info("China selected in Builder"); }} />
-                  <text x="161" y="38" textAnchor="middle" className="font-mono-data text-[7px] fill-foreground" pointerEvents="none">CHN</text>
-
-                  <rect x="98" y="38" width="22" height="15" rx="3" fill={wizardCountry === "Saudi Arabia" ? "var(--primary)" : "var(--muted)"} opacity={wizardCountry === "Saudi Arabia" ? 0.9 : 0.4} className="cursor-pointer transition-all" onClick={() => { setWizardCountry("Saudi Arabia"); if (guidedMode) toast.info("Saudi Arabia selected in Builder"); }} />
-                  <text x="109" y="47" textAnchor="middle" className="font-mono-data text-[6px] fill-foreground" pointerEvents="none">SAU</text>
-                </svg>
+              <div className="border border-border rounded-xl bg-background/50 p-2 overflow-hidden">
+                <WorldMap
+                  dots={mapDots}
+                  lineColor="var(--primary)"
+                  onPointClick={handleMapPointClick}
+                />
               </div>
               <p className="text-[10px] text-muted-foreground mt-2 leading-normal text-center">
-                Click highlighted regions to auto-select target jurisdictions for the Guided Builder.
+                Click dots on the map to auto-select target jurisdictions for the Guided Builder.
               </p>
             </Card>
 

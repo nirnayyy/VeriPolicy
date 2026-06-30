@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { FileText, LogOut, Mail, MapPin, ShieldCheck, Clock, ArrowRight, Download, Pencil, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/auth-provider";
 import { useActivity, useBriefs, useProfile } from "@/hooks/use-dashboard-data";
