@@ -26,8 +26,7 @@ function resolveEnv(): { url: string; anonKey: string } {
 }
 
 /**
- * Default client — uses project anon key, no user session. Used by admin
- * endpoints (policy-sync, generate-*-impact-brief) that act server-side.
+ * Default client — uses project anon key, no user session.
  */
 export function getSupabase(): SupabaseClient<Database> {
   const { url, anonKey } = resolveEnv();
@@ -37,6 +36,53 @@ export function getSupabase(): SupabaseClient<Database> {
       autoRefreshToken: false,
     },
   });
+}
+
+/**
+ * Admin client — bypasses RLS via the service role key. Required for
+ * server-side policy_feed reads/writes because the table is restricted to
+ * authenticated users and the anon key cannot see rows.
+ */
+export function getSupabaseAdmin(): SupabaseClient<Database> {
+  const env = (typeof process !== "undefined" && process.env) || {};
+  const url = env.VITE_SUPABASE_URL;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    throw new Error(
+      "Missing Supabase admin env vars. Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in server env.",
+    );
+  }
+
+  return createClient<Database>(url, serviceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+/**
+ * Resolves the best Supabase client for shared policy_feed operations:
+ * 1. Service role (production admin endpoints)
+ * 2. Caller's access token (preview/dev when service role is unavailable)
+ * 3. Anon key (last resort)
+ */
+export function getSupabaseForPolicyFeed(request?: Request): SupabaseClient<Database> {
+  const env = (typeof process !== "undefined" && process.env) || {};
+  if (env.SUPABASE_SERVICE_ROLE_KEY && env.VITE_SUPABASE_URL) {
+    return getSupabaseAdmin();
+  }
+
+  if (request) {
+    const authHeader = request.headers.get("authorization") ?? "";
+    const accessToken = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
+    if (accessToken) {
+      return getSupabaseForUser(accessToken);
+    }
+  }
+
+  return getSupabase();
 }
 
 /**

@@ -5,7 +5,9 @@
 // session) and the server Groq wrapper. The client SPA keeps its own copy of
 // the type helpers it needs; this module is only ever imported by the
 // /api/* serverless functions.
-import { getSupabase } from "./supabaseClient.js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseForPolicyFeed } from "./supabaseClient.js";
+import type { Database } from "./types.js";
 import { callGroqModel } from "./groq.js";
 
 export type ImpactBriefResult = {
@@ -164,8 +166,10 @@ export function parseStoredImpactBrief(value: unknown): ImpactBriefResult | null
 }
 
 // Keep legacy helpers for reading/storing brief in DB
-export async function getImpactBriefFromDb(policyId: string) {
-  const supabase = getSupabase();
+export async function getImpactBriefFromDb(
+  policyId: string,
+  supabase: SupabaseClient<Database> = getSupabaseForPolicyFeed(),
+) {
   const { data, error } = await supabase
     .from("policy_feed")
     .select("impact_brief")
@@ -176,8 +180,11 @@ export async function getImpactBriefFromDb(policyId: string) {
   return parseStoredImpactBrief(data?.impact_brief) ?? null;
 }
 
-export async function storeImpactBriefToDb(policyId: string, brief: ImpactBriefResult) {
-  const supabase = getSupabase();
+export async function storeImpactBriefToDb(
+  policyId: string,
+  brief: ImpactBriefResult,
+  supabase: SupabaseClient<Database> = getSupabaseForPolicyFeed(),
+) {
   const { error } = await supabase.from("policy_feed").update({ impact_brief: brief }).eq("id", policyId);
   if (error) throw error;
   return brief;

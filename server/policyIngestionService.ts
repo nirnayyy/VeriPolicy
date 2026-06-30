@@ -3,7 +3,7 @@
 // Mirrors src/services/policyIngestionService.ts but lives in /api/_lib so
 // Vercel bundles it into the policy-sync function. The client SPA does not
 // import this module. Uses the server Supabase client (no user session).
-import { getSupabase } from "./supabaseClient.js";
+import { getSupabaseForPolicyFeed } from "./supabaseClient.js";
 import type { PolicyFeed } from "./types.js";
 
 const KEY = process.env.NEWSDATA_API_KEY || process.env.VITE_NEWSDATA_API_KEY || "";
@@ -94,7 +94,7 @@ export async function ingestPoliciesFromNewsData(): Promise<{
 
   if (!totalFetched) return { inserted: 0, skipped: 0, totalFetched };
 
-  const supabase = getSupabase();
+  const supabase = getSupabaseForPolicyFeed();
 
   const mapped = articles.map(extractArticleFromNewsData).filter((p) => p.url);
   const byUrl = new Map<string, Partial<PolicyFeed>>();

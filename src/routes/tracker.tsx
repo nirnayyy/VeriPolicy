@@ -236,9 +236,20 @@ function TrackerPage() {
     setIsGeneratingBrief(true);
 
     try {
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      if (isSupabaseConfigured()) {
+        const supabase = getSupabase();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+      }
+
       const response = await fetch("/api/generate-impact-brief", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers,
         body: JSON.stringify({ policyId: policy.id }),
       });
 

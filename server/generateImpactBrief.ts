@@ -4,7 +4,7 @@
 // /api/_lib so Vercel bundles it into the generate-impact-brief function.
 // Uses the server Supabase client (no user session) and the server impact
 // brief service.
-import { getSupabase } from "./supabaseClient.js";
+import { getSupabaseForPolicyFeed } from "./supabaseClient.js";
 import { generateImpactBrief, parseStoredImpactBrief, storeImpactBriefToDb } from "./impactBriefService.js";
 
 export async function handleGenerateImpactBriefRequest(request: Request): Promise<Response> {
@@ -22,8 +22,9 @@ export async function handleGenerateImpactBriefRequest(request: Request): Promis
       });
     }
 
-    // Check DB for cached brief and also load article fields
-    const supabase = getSupabase();
+    // Check DB for cached brief and also load article fields.
+    // Use service role (or caller token) so RLS does not hide policy rows.
+    const supabase = getSupabaseForPolicyFeed(request);
     const { data: row, error: selErr } = await supabase
       .from("policy_feed")
       .select("id, title, summary, source, category, country, impact_brief")
@@ -57,7 +58,7 @@ export async function handleGenerateImpactBriefRequest(request: Request): Promis
     const result = await generateImpactBrief(article);
 
     // store to DB
-    await storeImpactBriefToDb(policyId, result);
+    await storeImpactBriefToDb(policyId, result, supabase);
 
     return new Response(JSON.stringify({ policyId, impactBrief: result }), {
       status: 200,
