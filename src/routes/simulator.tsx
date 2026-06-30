@@ -29,6 +29,7 @@ import { fetchSimulationHistory, generateForesightMemo } from "@/services/simula
 import { createBrief } from "@/lib/supabase/dashboard";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
 import { WorldMap } from "@/components/ui/map";
+import { SimulationReportCharts } from "@/components/SimulationReportCharts";
 import { toast } from "sonner";
 import { requireAuth } from "@/lib/auth-guard";
 
@@ -668,6 +669,25 @@ function SimulatorPage() {
 
         <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">
+            <div className="flex border border-border bg-muted/45 p-1 rounded-xl shadow-sm">
+              <button
+                onClick={() => setGuidedMode(true)}
+                className={`flex-1 py-2 text-xs font-mono-data uppercase tracking-wider text-center rounded-lg transition-all cursor-pointer ${
+                  guidedMode ? "bg-card text-foreground font-semibold shadow-sm border border-border/40" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Guided Policy Wizard
+              </button>
+              <button
+                onClick={() => setGuidedMode(false)}
+                className={`flex-1 py-2 text-xs font-mono-data uppercase tracking-wider text-center rounded-lg transition-all cursor-pointer ${
+                  !guidedMode ? "bg-card text-foreground font-semibold shadow-sm border border-border/40" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Narrative Scenario Statement
+              </button>
+            </div>
+
             {guidedMode ? (
               <Card className="border-border bg-card p-6 shadow-sm rounded-2xl relative overflow-hidden">
                 <div className="absolute right-0 top-0 h-32 w-32 bg-gradient-to-bl from-[var(--primary)]/10 to-transparent pointer-events-none" />
@@ -864,264 +884,6 @@ function SimulatorPage() {
                   </Card>
                 </motion.div>
               )}
-
-              {state === "done" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <Card className="border-border bg-card overflow-hidden shadow-sm rounded-2xl">
-                    <div className="grid md:grid-cols-[200px_1fr] min-h-[500px]">
-                      <div className="border-r border-border bg-muted/20 p-5 space-y-6">
-                        <div>
-                          <span className="font-mono-data text-[9px] uppercase tracking-widest text-muted-foreground block">Intelligence Desk</span>
-                          <span className="text-[11px] font-semibold text-foreground block mt-0.5">Scenario Analyser</span>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          {[
-                            { id: "narrative", label: "Executive Brief", icon: FileText, desc: "Narrative memo report" },
-                            { id: "charts", label: "Quantitative Charts", icon: BarChart3, desc: "Reallocations & Gauge" },
-                            { id: "timeline", label: "Archived Precedents", icon: Calendar, desc: "Historical timelines" },
-                            { id: "networks", label: "Relationship Graph", icon: Network, desc: "RAG vector match map" },
-                            { id: "exports", label: "Export & Sharing", icon: Share2, desc: "PDF, Excel & Links" },
-                          ].map((tab) => {
-                            const Icon = tab.icon;
-                            const active = activeTab === tab.id;
-                            return (
-                              <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`w-full text-left rounded-lg p-2.5 transition-colors cursor-pointer block ${
-                                  active ? "bg-muted text-foreground border-l-2 border-[var(--primary)] font-semibold shadow-sm" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Icon className="h-4 w-4" />
-                                  <span className="text-xs">{tab.label}</span>
-                                </div>
-                                <span className="text-[9px] text-muted-foreground/80 block pl-6 mt-0.5">{tab.desc}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        
-                        <div className="border-t border-border pt-4 text-[9px] font-mono-data text-muted-foreground uppercase leading-relaxed">
-                          <div>REF ID: {savedBriefId ? savedBriefId.slice(0, 8) : "DRAFT"}</div>
-                          <div className="mt-1">Confidence: {confidence ?? "Medium"}</div>
-                        </div>
-                      </div>
-
-                      <div className="p-6 overflow-y-auto max-h-[70vh] custom-scroll">
-                        {activeTab === "narrative" && (
-                          <div className="space-y-5 animate-fade-in">
-                            <div className="rounded-2xl border border-border bg-muted/40 p-4">
-                              <div className="text-xs font-semibold text-foreground">Narrative summary</div>
-                              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                                The memo below synthesizes your scenario with relevant historical matches and confidence scoring.
-                              </p>
-                            </div>
-
-                            <div className="grid gap-4">
-                              {memoSections.map((section) => (
-                                <Card key={section.title} className="relative group/section border-border bg-background p-4 shadow-sm">
-                                  <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
-                                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground font-mono-data">
-                                      {section.title}
-                                    </div>
-                                    <button 
-                                      onClick={() => handleSpeakSection(section.body)}
-                                      className={`p-1 rounded hover:bg-muted transition-colors cursor-pointer ${speakingSection === section.body ? "text-primary" : "text-muted-foreground opacity-0 group-hover/section:opacity-100"}`}
-                                      title={speakingSection === section.body ? "Stop reading" : "Read section aloud"}
-                                    >
-                                      <Volume2 className="h-3.5 w-3.5" />
-                                    </button>
-                                  </div>
-                                  <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                                    {renderBodyWithCitations(section.body, historicalMatches)}
-                                  </div>
-                                </Card>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {activeTab === "charts" && (
-                          <div className="space-y-5">
-                            <div className="rounded-2xl border border-border bg-muted/40 p-4">
-                              <div className="text-xs font-semibold text-foreground">Explainable AI Calibration</div>
-                              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                                Use the slider below to adjust the scale calibration factor dynamically.
-                              </p>
-                              
-                              <div className="mt-4 flex items-center justify-between gap-4">
-                                <span className="text-[10px] font-mono-data uppercase tracking-wider text-muted-foreground">Manual Math Override</span>
-                                <span className="font-mono-data font-semibold text-primary">{scaleMultiplier.toFixed(1)}x</span>
-                              </div>
-                              <input
-                                type="range" min="0.1" max="4.0" step="0.1" value={scaleMultiplier}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setScaleMultiplier(Number(e.target.value))}
-                                className="w-full accent-primary h-1 rounded-lg cursor-pointer mt-1"
-                              />
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                              {chartCountries.map((country) => (
-                                <span key={country} className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground">
-                                  {country}
-                                </span>
-                              ))}
-                            </div>
-
-                            <AnalyticsCharts countries={displayedCountries} />
-
-                            <div className="mt-6 grid grid-cols-2 gap-4">
-                              <div className="rounded-2xl border border-border bg-background p-4 flex flex-col justify-between shadow-sm">
-                                <div>
-                                  <div className="text-[9px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Confidence Score</div>
-                                  <div className="mt-2 text-2xl font-semibold text-foreground">{confidence ?? "Low"}</div>
-                                </div>
-                                <span className="text-[8px] font-mono-data text-muted-foreground block mt-1.5 uppercase tracking-wider">Calibration Factor</span>
-                              </div>
-
-                              <div className="rounded-2xl border border-border bg-background p-4 flex items-center justify-between shadow-sm">
-                                <div className="flex-1">
-                                  <div className="text-[9px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Geopolitical Shift</div>
-                                  <div className="mt-1.5 text-2xl font-semibold text-foreground">{Math.round(riskScore * scaleMultiplier)}%</div>
-                                  <span className="text-[8px] font-mono-data text-muted-foreground block mt-1.5 uppercase tracking-wider">Shift Intensity</span>
-                                </div>
-                                <div className="relative h-12 w-12 flex-shrink-0">
-                                  <svg className="h-full w-full -rotate-90">
-                                    <circle cx="24" cy="24" r="20" fill="none" stroke="var(--border)" strokeWidth="3" />
-                                    <circle 
-                                      cx="24" 
-                                      cy="24" 
-                                      r="20" 
-                                      fill="none" 
-                                      stroke="var(--primary)" 
-                                      strokeWidth="3" 
-                                      strokeDasharray={2 * Math.PI * 20} 
-                                      strokeDashoffset={2 * Math.PI * 20 * (1 - Math.min(100, riskScore * scaleMultiplier) / 100)} 
-                                      strokeLinecap="round"
-                                      className="transition-all duration-700 ease-out"
-                                    />
-                                  </svg>
-                                  <span className="absolute inset-0 flex items-center justify-center font-mono-data text-[8px] font-bold">
-                                    {Math.round(riskScore * scaleMultiplier) > 70 ? "HIGH" : Math.round(riskScore * scaleMultiplier) > 40 ? "MED" : "LOW"}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {activeTab === "timeline" && (
-                          <div className="space-y-5 animate-fade-in">
-                            <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
-                              <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-4">
-                                Historical Precedent Timeline
-                              </div>
-                              <div className="relative border-l border-border pl-6 ml-3 space-y-6">
-                                {historicalMatches.slice(0, 3).map((match, idx) => (
-                                  <div key={`${match.country}-${match.period}`} className="relative group">
-                                    <div className="absolute -left-[31px] top-1.5 h-3 w-3 rounded-full border-2 border-background" style={{ backgroundColor: ["var(--primary)", "var(--accent-cyan)", "var(--accent-violet)"][idx % 3] }} />
-                                    <div className="flex items-center justify-between text-xs font-mono-data text-muted-foreground uppercase tracking-wider">
-                                      <span>{match.period}</span>
-                                      <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-foreground font-semibold">
-                                        {(match.similarity * 100).toFixed(0)}% Similarity
-                                      </span>
-                                    </div>
-                                    <div className="mt-1 font-display text-base font-semibold text-foreground leading-snug">{match.country}</div>
-                                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                      Grounded baseline for emissions outputs and geopolitical shifts during this epoch.
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {activeTab === "networks" && (
-                          <div className="space-y-5">
-                            <div className="rounded-2xl border border-border bg-muted/40 p-4">
-                              <div className="text-xs font-semibold text-foreground">Precedent Network Graph</div>
-                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                Graphical representation of vector proximity between scenario parameters and historical matches.
-                              </p>
-                            </div>
-                            <div className="border border-border rounded-2xl bg-background p-4 flex items-center justify-center min-h-[280px]">
-                              <svg className="w-full max-w-[360px] h-[240px]" viewBox="0 0 200 150">
-                                {historicalMatches.slice(0, 3).map((match, idx) => {
-                                  const angles = [-30, 90, 210];
-                                  const rad = (angles[idx] * Math.PI) / 180;
-                                  const x2 = 100 + Math.cos(rad) * 60;
-                                  const y2 = 75 + Math.sin(rad) * 45;
-                                  return (
-                                    <g key={idx}>
-                                      <line
-                                        x1="100" y1="75" x2={x2} y2={y2}
-                                        stroke="var(--primary)"
-                                        strokeWidth={1 + match.similarity * 3}
-                                        strokeDasharray="2 2"
-                                      />
-                                      <circle cx={x2} cy={y2} r="5" fill="var(--accent-cyan)" />
-                                      <text x={x2 > 100 ? x2 + 8 : x2 - 48} y={y2 + 4} className="font-mono-data text-[7px] fill-foreground" fontWeight="bold">
-                                        {match.country}
-                                      </text>
-                                    </g>
-                                  );
-                                })}
-                                <circle cx="100" cy="75" r="9" fill="var(--primary)" />
-                                <text x="100" y="78" textAnchor="middle" className="font-mono-data text-[6px] fill-white" fontWeight="bold">Scenario</text>
-                              </svg>
-                            </div>
-                          </div>
-                        )}
-
-                        {activeTab === "exports" && (
-                          <div className="space-y-5">
-                            <div className="rounded-2xl border border-border bg-muted/40 p-5">
-                              <div className="text-xs font-semibold text-foreground">Export Panel</div>
-                              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                                Extract your brief report as structured text, PDF format, or share the interactive parameters.
-                              </p>
-                            </div>
-
-                            <div className="flex flex-col gap-2.5">
-                              {saving && (
-                                <div className="rounded-xl border border-border bg-blue-50/50 p-4 text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  <span className="text-xs font-medium">Saving memo to drafts...</span>
-                                </div>
-                              )}
-                              {savedBriefId && !saving && (
-                                <div className="rounded-xl border border-border bg-green-50/50 p-4 text-green-700 dark:text-green-300 flex items-center gap-2">
-                                  <Check className="h-4 w-4" />
-                                  <span className="text-xs font-medium font-mono-data">Saved to Past Drafts (ID: {savedBriefId.slice(0, 8)})</span>
-                                </div>
-                              )}
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button onClick={downloadBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-xl">
-                                  <Download className="h-4 w-4" /> Download (.txt)
-                                </Button>
-                                <Button onClick={downloadPdfBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-xl">
-                                  <Download className="h-4 w-4" /> Export (.pdf)
-                                </Button>
-                              </div>
-                              <Button onClick={generateShareLink} variant="secondary" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-xl cursor-pointer">
-                                <Share2 className="h-4 w-4" /> Copy Shareable Link
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              )}
             </AnimatePresence>
           </div>
 
@@ -1170,6 +932,303 @@ function SimulatorPage() {
             )}
           </div>
         </div>
+
+        {/* SIMULATION DOSSIER RESULTS CARD (Full width below) */}
+        <AnimatePresence>
+          {state === "done" && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-8"
+            >
+              <Card className="border-border bg-card overflow-hidden shadow-sm rounded-2xl">
+                <div className="grid md:grid-cols-[220px_1fr] min-h-[500px]">
+                  {/* Left Sidebar */}
+                  <div className="border-r border-border bg-muted/20 p-5 space-y-6">
+                    <div>
+                      <span className="font-mono-data text-[9px] uppercase tracking-widest text-muted-foreground block">Intelligence Desk</span>
+                      <span className="text-[11px] font-semibold text-foreground block mt-0.5">Scenario Analyser</span>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      {[
+                        { id: "narrative", label: "Executive Brief", icon: FileText, desc: "Narrative memo report" },
+                        { id: "charts", label: "Quantitative Charts", icon: BarChart3, desc: "Reallocations & Gauge" },
+                        { id: "timeline", label: "Archived Precedents", icon: Calendar, desc: "Historical timelines" },
+                        { id: "networks", label: "Relationship Graph", icon: Network, desc: "RAG vector match map" },
+                        { id: "exports", label: "Export & Sharing", icon: Share2, desc: "PDF, Excel & Links" },
+                      ].map((tab) => {
+                        const Icon = tab.icon;
+                        const active = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`w-full text-left rounded-lg p-2.5 transition-colors cursor-pointer block ${
+                              active ? "bg-muted text-foreground border-l-2 border-[var(--primary)] font-semibold shadow-sm" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              <span className="text-xs">{tab.label}</span>
+                            </div>
+                            <span className="text-[9px] text-muted-foreground/80 block pl-6 mt-0.5">{tab.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="border-t border-border pt-4 text-[9px] font-mono-data text-muted-foreground uppercase leading-relaxed">
+                      <div>REF ID: {savedBriefId ? savedBriefId.slice(0, 8) : "DRAFT"}</div>
+                      <div className="mt-1">Confidence: {confidence ?? "Medium"}</div>
+                    </div>
+                  </div>
+
+                  {/* Main Tab Content Panel */}
+                  <div className="p-6 overflow-y-auto max-h-[90vh] custom-scroll">
+                    {activeTab === "narrative" && (
+                      <div className="space-y-5 animate-fade-in">
+                        <div className="rounded-2xl border border-border bg-muted/40 p-4">
+                          <div className="text-xs font-semibold text-foreground">Narrative summary</div>
+                          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                            The memo below synthesizes your scenario with relevant historical matches and confidence scoring.
+                          </p>
+                        </div>
+
+                        <div className="grid gap-4">
+                          {memoSections.map((section) => (
+                            <Card key={section.title} className="relative group/section border-border bg-background p-4 shadow-sm">
+                              <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
+                                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground font-mono-data">
+                                  {section.title}
+                                </div>
+                                <button 
+                                  onClick={() => handleSpeakSection(section.body)}
+                                  className={`p-1 rounded hover:bg-muted transition-colors cursor-pointer ${speakingSection === section.body ? "text-primary" : "text-muted-foreground opacity-0 group-hover/section:opacity-100"}`}
+                                  title={speakingSection === section.body ? "Stop reading" : "Read section aloud"}
+                                >
+                                  <Volume2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                              <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                                {renderBodyWithCitations(section.body, historicalMatches)}
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "charts" && (
+                      <div className="space-y-6 animate-fade-in">
+                        <div className="grid gap-6 md:grid-cols-2">
+                          {/* Left: AI Slider Control */}
+                          <div className="rounded-2xl border border-border bg-muted/40 p-5 flex flex-col justify-between">
+                            <div>
+                              <div className="text-xs font-semibold text-foreground">Explainable AI Calibration</div>
+                              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                Use the slider below to adjust the scale calibration factor dynamically.
+                              </p>
+                            </div>
+                            <div className="mt-4">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="text-[10px] font-mono-data uppercase tracking-wider text-muted-foreground">Manual Math Override</span>
+                                <span className="font-mono-data font-semibold text-primary">{scaleMultiplier.toFixed(1)}x</span>
+                              </div>
+                              <input
+                                type="range" min="0.1" max="4.0" step="0.1" value={scaleMultiplier}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setScaleMultiplier(Number(e.target.value))}
+                                className="w-full accent-primary h-1 rounded-lg cursor-pointer mt-2"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Right: Confidence Indicators */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="rounded-2xl border border-border bg-background p-4 flex flex-col justify-between shadow-sm">
+                              <div>
+                                <div className="text-[9px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Confidence Score</div>
+                                <div className="mt-2 text-2xl font-semibold text-foreground">{confidence ?? "Low"}</div>
+                              </div>
+                              <span className="text-[8px] font-mono-data text-muted-foreground block mt-1.5 uppercase tracking-wider">Calibration Factor</span>
+                            </div>
+
+                            <div className="rounded-2xl border border-border bg-background p-4 flex items-center justify-between shadow-sm">
+                              <div className="flex-1">
+                                <div className="text-[9px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Geopolitical Shift</div>
+                                <div className="mt-1.5 text-2xl font-semibold text-foreground">{Math.round(riskScore * scaleMultiplier)}%</div>
+                                <span className="text-[8px] font-mono-data text-muted-foreground block mt-1.5 uppercase tracking-wider">Shift Intensity</span>
+                              </div>
+                              <div className="relative h-12 w-12 flex-shrink-0">
+                                <svg className="h-full w-full -rotate-90">
+                                  <circle cx="24" cy="24" r="20" fill="none" stroke="var(--border)" strokeWidth="3" />
+                                  <circle 
+                                    cx="24" 
+                                    cy="24" 
+                                    r="20" 
+                                    fill="none" 
+                                    stroke="var(--primary)" 
+                                    strokeWidth="3" 
+                                    strokeDasharray={2 * Math.PI * 20} 
+                                    strokeDashoffset={2 * Math.PI * 20 * (1 - Math.min(100, Math.round(riskScore * scaleMultiplier)) / 100)} 
+                                    strokeLinecap="round"
+                                    className="transition-all duration-700 ease-out"
+                                  />
+                                </svg>
+                                <span className="absolute inset-0 flex items-center justify-center font-mono-data text-[8px] font-bold">
+                                  {Math.round(riskScore * scaleMultiplier) > 70 ? "HIGH" : Math.round(riskScore * scaleMultiplier) > 40 ? "MED" : "LOW"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Designer Projections */}
+                        <div className="border-t border-border pt-6">
+                          <div className="mb-4">
+                            <span className="font-mono-data text-[9px] uppercase tracking-widest text-muted-foreground">Calibration Forecasts</span>
+                            <h3 className="text-base font-semibold text-foreground mt-0.5">Sovereign Simulation Projections</h3>
+                          </div>
+                          <SimulationReportCharts
+                            country={wizardCountry}
+                            shiftType={wizardShiftType}
+                            amount={wizardAmount}
+                            offsetAmount={wizardOffsetAmount}
+                            scaleMultiplier={scaleMultiplier}
+                            riskScore={riskScore}
+                          />
+                        </div>
+
+                        {/* Historical Baseline */}
+                        <div className="border-t border-border pt-6">
+                          <div className="mb-4">
+                            <span className="font-mono-data text-[9px] uppercase tracking-widest text-muted-foreground">Baseline Data</span>
+                            <h3 className="text-base font-semibold text-foreground mt-0.5">Historical Base Expenditure Comparison</h3>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {chartCountries.map((country) => (
+                              <span key={country} className="rounded-full border border-border bg-background px-3 py-1 text-[10px] font-mono-data text-foreground">
+                                {country}
+                              </span>
+                            ))}
+                          </div>
+                          <AnalyticsCharts countries={displayedCountries} />
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "timeline" && (
+                      <div className="space-y-5 animate-fade-in">
+                        <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+                          <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-4">
+                            Historical Precedent Timeline
+                          </div>
+                          {historicalMatches.length === 0 ? (
+                            <div className="text-center py-6 text-xs text-muted-foreground font-mono-data">
+                              No matching analogues found.
+                            </div>
+                          ) : (
+                            <div className="relative border-l border-border pl-6 ml-3 space-y-6">
+                              {historicalMatches.slice(0, 3).map((match, idx) => (
+                                <div key={`${match.country}-${match.period}`} className="relative group">
+                                  <div className="absolute -left-[31px] top-1.5 h-3 w-3 rounded-full border-2 border-background" style={{ backgroundColor: ["var(--primary)", "var(--accent-cyan)", "var(--accent-violet)"][idx % 3] }} />
+                                  <div className="flex items-center justify-between text-xs font-mono-data text-muted-foreground uppercase tracking-wider">
+                                    <span>{match.period}</span>
+                                    <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-foreground font-semibold">
+                                      {(match.similarity * 100).toFixed(0)}% Similarity
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 font-display text-base font-semibold text-foreground leading-snug">{match.country}</div>
+                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    Grounded baseline for emissions outputs and geopolitical shifts during this epoch.
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "networks" && (
+                      <div className="space-y-5 animate-fade-in">
+                        <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
+                          <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-3 flex items-center justify-between">
+                            <span>Vector Match Precedent Network Graph</span>
+                            <span className="text-[9px] font-normal lowercase tracking-normal">RAG similarity threshold: 0.65</span>
+                          </div>
+                          <div className="border border-border rounded-xl bg-background/50 p-2 flex items-center justify-center min-h-[220px]">
+                            <svg className="w-full h-[200px]" viewBox="0 0 200 100">
+                              {/* Center Node (Current Scenario) */}
+                              <circle cx="100" cy="50" r="6" fill="var(--primary)" className="animate-pulse" />
+                              <text x="100" y="40" textAnchor="middle" className="font-mono-data text-[5px] fill-foreground font-bold">Active Scenario</text>
+
+                              {/* Connecting Match Lines & Nodes */}
+                              {historicalMatches.map((match, idx) => {
+                                const angles = [30, 150, 270, 90, 210, 330];
+                                const angle = (angles[idx % angles.length] * Math.PI) / 180;
+                                const radius = 35 + idx * 5;
+                                const cx = 100 + radius * Math.cos(angle);
+                                const cy = 50 + radius * Math.sin(angle);
+
+                                return (
+                                  <g key={idx}>
+                                    <line x1="100" y1="50" x2={cx} y2={cy} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="1 1" />
+                                    <circle cx={cx} cy={cy} r="4" fill="var(--accent-cyan)" />
+                                    <text x={cx} y={cy - 6} textAnchor="middle" className="font-mono-data text-[4px] fill-muted-foreground">{match.country} ({match.period})</text>
+                                    <text x={cx} y={cy + 10} textAnchor="middle" className="font-mono-data text-[3.5px] fill-[var(--primary)] font-semibold">{(match.similarity * 100).toFixed(0)}% Match</text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "exports" && (
+                      <div className="space-y-5 animate-fade-in">
+                        <div className="rounded-2xl border border-border bg-background p-5 shadow-sm space-y-4">
+                          <div>
+                            <h4 className="font-display text-sm font-semibold text-foreground">Export Dossier Memo</h4>
+                            <p className="text-[10px] text-muted-foreground leading-normal mt-0.5">
+                              Download this calibrated simulation in various formats for offline intelligence reports or external policymaking briefs.
+                            </p>
+                          </div>
+                          {saving && (
+                            <div className="rounded-xl border border-border bg-blue-50/50 p-4 text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-xs font-medium">Saving memo to drafts...</span>
+                            </div>
+                          )}
+                          {savedBriefId && !saving && (
+                            <div className="rounded-xl border border-border bg-green-50/50 p-4 text-green-700 dark:text-green-300 flex items-center gap-2">
+                              <Check className="h-4 w-4" />
+                              <span className="text-xs font-medium font-mono-data">Saved to Past Drafts (ID: {savedBriefId.slice(0, 8)})</span>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button onClick={downloadBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-xl">
+                              <Download className="h-4 w-4" /> Download (.txt)
+                            </Button>
+                            <Button onClick={downloadPdfBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-xl">
+                              <Download className="h-4 w-4" /> Export (.pdf)
+                            </Button>
+                          </div>
+                          <Button onClick={generateShareLink} variant="secondary" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-xl cursor-pointer">
+                            <Share2 className="h-4 w-4" /> Copy Shareable Link
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       <AnimatePresence>
