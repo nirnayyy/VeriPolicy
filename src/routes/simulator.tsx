@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Loader2, Download, Check, Share2, Volume2 } from "lucide-react";
+import { FileText, Loader2, Download, Check, Share2, Volume2, BarChart3, Calendar } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -236,6 +236,7 @@ function SimulatorPage() {
   const [saving, setSaving] = useState(false);
   const [isTypingExample, setIsTypingExample] = useState(false);
   const [speakingSection, setSpeakingSection] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"narrative" | "charts" | "timeline" | "exports">("narrative");
 
   const handleSpeakSection = (text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -439,6 +440,7 @@ function SimulatorPage() {
         console.warn("Unable to refresh simulation history", historyError);
       }
       setState("done");
+      setActiveTab("narrative");
     } catch (err: any) {
       console.error("GENERATE ERROR", err);
       setError(err.message || String(err));
@@ -671,196 +673,236 @@ function SimulatorPage() {
 
             {state === "done" && (
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-                  <Card className="order-2 lg:order-1 border-border bg-card p-0 overflow-hidden shadow-lg">
-                    <Accordion type="single" collapsible defaultValue="analytics">
-                      <AccordionItem value="analytics">
-                        <AccordionTrigger className="bg-background/90 px-6 py-4 text-left text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                          Analytics overview
-                        </AccordionTrigger>
-                        <AccordionContent className="px-6 pb-6">
-                          <div className="space-y-5">
-                            <div className="rounded-3xl border border-border bg-muted/50 p-4">
-                              <div className="text-sm font-semibold text-foreground">Insights summary</div>
-                              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                                View country-level trend charts, context indicators, and how selected regions compare in historical defence and emissions data.
-                              </p>
+                <Card className="border-border bg-card overflow-hidden shadow-lg rounded-2xl">
+                  <div className="grid md:grid-cols-[220px_1fr] min-h-[550px]">
+                    {/* Left Navigation Sidebar */}
+                    <div className="border-r border-border bg-muted/30 p-5 space-y-6">
+                      <div>
+                        <span className="font-mono-data text-[9px] uppercase tracking-widest text-muted-foreground block">Intelligence Desk</span>
+                        <span className="text-[11px] font-semibold text-foreground block mt-0.5">Scenario Analyser</span>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        {[
+                          { id: "narrative", label: "Executive Brief", icon: FileText, desc: "Narrative memo report" },
+                          { id: "charts", label: "Quantitative Charts", icon: BarChart3, desc: "Reallocations & Gauge" },
+                          { id: "timeline", label: "Archived Precedents", icon: Calendar, desc: "Historical timelines" },
+                          { id: "exports", label: "Export & Sharing", icon: Share2, desc: "PDF, Excel & Links" },
+                        ].map((tab) => {
+                          const Icon = tab.icon;
+                          const active = activeTab === tab.id;
+                          return (
+                            <button
+                              key={tab.id}
+                              onClick={() => setActiveTab(tab.id as any)}
+                              className={`w-full text-left rounded-lg p-2.5 transition-colors cursor-pointer block ${
+                                active ? "bg-muted text-foreground border-l-2 border-[var(--primary)] font-semibold shadow-sm" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Icon className="h-4 w-4" />
+                                <span className="text-xs">{tab.label}</span>
+                              </div>
+                              <span className="text-[9px] text-muted-foreground/80 block pl-6 mt-0.5">{tab.desc}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="border-t border-border pt-4 text-[9px] font-mono-data text-muted-foreground uppercase leading-relaxed">
+                        <div>REF ID: {savedBriefId ? savedBriefId.slice(0, 8) : "DRAFT"}</div>
+                        <div className="mt-1">Confidence: {confidence ?? "Medium"}</div>
+                      </div>
+                    </div>
+
+                    {/* Right Content Panel */}
+                    <div className="p-6 overflow-y-auto max-h-[70vh]">
+                      {activeTab === "narrative" && (
+                        <div className="space-y-5">
+                          <div className="rounded-3xl border border-border bg-muted/50 p-4">
+                            <div className="text-sm font-semibold text-foreground">Narrative summary</div>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                              The memo below synthesizes your scenario with relevant historical matches and confidence scoring for analyst-ready review.
+                            </p>
+                          </div>
+
+                          <div className="grid gap-4">
+                            {memoSections.map((section) => (
+                              <Card key={section.title} className="relative group/section border-border bg-background p-4 shadow-sm">
+                                <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
+                                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground font-mono-data">
+                                    {section.title}
+                                  </div>
+                                  <button 
+                                    onClick={() => handleSpeakSection(section.body)}
+                                    className={`p-1 rounded hover:bg-muted transition-colors cursor-pointer ${speakingSection === section.body ? "text-primary" : "text-muted-foreground opacity-0 group-hover/section:opacity-100"}`}
+                                    title={speakingSection === section.body ? "Stop reading" : "Read section aloud"}
+                                  >
+                                    <Volume2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                                <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground">
+                                  {renderBodyWithCitations(section.body, historicalMatches)}
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {activeTab === "charts" && (
+                        <div className="space-y-5">
+                          <div className="rounded-3xl border border-border bg-muted/50 p-4">
+                            <div className="text-sm font-semibold text-foreground">Insights summary</div>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                              View country-level trend charts, context indicators, and how selected regions compare in historical defence and emissions data.
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {chartCountries.map((country) => (
+                              <span key={country} className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground">
+                                {country}
+                              </span>
+                            ))}
+                          </div>
+
+                          <AnalyticsCharts countries={displayedCountries} />
+
+                          <div className="mt-6 grid grid-cols-2 gap-4">
+                            <div className="rounded-3xl border border-border bg-background p-5 flex flex-col justify-between">
+                              <div>
+                                <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Confidence Score</div>
+                                <div className="mt-3 text-2xl font-semibold text-foreground">{confidence ?? "Low"}</div>
+                              </div>
+                              <span className="text-[9px] font-mono-data text-muted-foreground block mt-1 uppercase tracking-wider">Calibration Factor</span>
                             </div>
 
-                            <div className="flex flex-wrap gap-2">
-                              {chartCountries.map((country) => (
-                                <span key={country} className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground">
-                                  {country}
+                            <div className="rounded-3xl border border-border bg-background p-5 flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Geopolitical Shift</div>
+                                <div className="mt-2 text-2xl font-semibold text-foreground">{riskScore}%</div>
+                                <span className="text-[9px] font-mono-data text-muted-foreground block mt-1 uppercase tracking-wider">Shift Intensity</span>
+                              </div>
+                              <div className="relative h-14 w-14 flex-shrink-0">
+                                <svg className="h-full w-full -rotate-90">
+                                  <circle cx="28" cy="28" r="23" fill="none" stroke="var(--border)" strokeWidth="3.5" />
+                                  <circle 
+                                    cx="28" 
+                                    cy="28" 
+                                    r="23" 
+                                    fill="none" 
+                                    stroke={riskScore > 70 ? "var(--destructive)" : riskScore > 40 ? "var(--primary)" : "var(--accent-cyan)"} 
+                                    strokeWidth="3.5" 
+                                    strokeDasharray={2 * Math.PI * 23} 
+                                    strokeDashoffset={2 * Math.PI * 23 * (1 - riskScore / 100)} 
+                                    strokeLinecap="round"
+                                    className="transition-all duration-1000 ease-out"
+                                  />
+                                </svg>
+                                <span className="absolute inset-0 flex items-center justify-center font-mono-data text-[9px] font-bold">
+                                  {riskScore > 70 ? "HIGH" : riskScore > 40 ? "MED" : "LOW"}
                                 </span>
-                              ))}
-                            </div>
-
-                            <AnalyticsCharts countries={displayedCountries} />
-
-                            <AnalyticsCharts countries={displayedCountries} />
-
-                            <div className="mt-6 grid grid-cols-2 gap-4">
-                              <div className="rounded-3xl border border-border bg-background p-5 flex flex-col justify-between">
-                                <div>
-                                  <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Confidence Score</div>
-                                  <div className="mt-3 text-2xl font-semibold text-foreground">{confidence ?? "Low"}</div>
-                                </div>
-                                <span className="text-[9px] font-mono-data text-muted-foreground block mt-1 uppercase tracking-wider">Calibration Factor</span>
-                              </div>
-
-                              <div className="rounded-3xl border border-border bg-background p-5 flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground">Geopolitical Shift</div>
-                                  <div className="mt-2 text-2xl font-semibold text-foreground">{riskScore}%</div>
-                                  <span className="text-[9px] font-mono-data text-muted-foreground block mt-1 uppercase tracking-wider">Shift Intensity</span>
-                                </div>
-                                <div className="relative h-14 w-14 flex-shrink-0">
-                                  <svg className="h-full w-full -rotate-90">
-                                    <circle cx="28" cy="28" r="23" fill="none" stroke="var(--border)" strokeWidth="3.5" />
-                                    <circle 
-                                      cx="28" 
-                                      cy="28" 
-                                      r="23" 
-                                      fill="none" 
-                                      stroke={riskScore > 70 ? "var(--destructive)" : riskScore > 40 ? "var(--primary)" : "var(--accent-cyan)"} 
-                                      strokeWidth="3.5" 
-                                      strokeDasharray={2 * Math.PI * 23} 
-                                      strokeDashoffset={2 * Math.PI * 23 * (1 - riskScore / 100)} 
-                                      strokeLinecap="round"
-                                      className="transition-all duration-1000 ease-out"
-                                    />
-                                  </svg>
-                                  <span className="absolute inset-0 flex items-center justify-center font-mono-data text-[9px] font-bold">
-                                    {riskScore > 70 ? "HIGH" : riskScore > 40 ? "MED" : "LOW"}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="rounded-3xl border border-border bg-background p-5 mt-6">
-                              <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-3">
-                                Calibration Calibration: Scenario vs History
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 text-xs border-b border-border pb-2 mb-2 font-mono-data text-muted-foreground uppercase tracking-wider">
-                                <div>Parameter</div>
-                                <div>Your Scenario</div>
-                                <div>Historical Match</div>
-                              </div>
-                              <div className="space-y-3.5 text-xs">
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="font-semibold text-foreground">Defense Shift</div>
-                                  <div className="text-[var(--primary)] font-semibold">{parsePercentageFromScenario(input, "defense")}</div>
-                                  <div className="text-muted-foreground truncate">{historicalMatches[0]?.defense_trend || "N/A"}</div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="font-semibold text-foreground">Emissions / Energy</div>
-                                  <div className="text-[var(--accent-cyan)] font-semibold">{parsePercentageFromScenario(input, "subsidy")}</div>
-                                  <div className="text-muted-foreground truncate">{historicalMatches[0]?.emissions_trend || "N/A"}</div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="font-semibold text-foreground">Key Jurisdiction</div>
-                                  <div className="text-foreground truncate">{getCountriesFromScenario(input)[0] || "Global"}</div>
-                                  <div className="text-muted-foreground font-semibold truncate">{historicalMatches[0]?.country || "N/A"} ({historicalMatches[0]?.period || "N/A"})</div>
-                                </div>
                               </div>
                             </div>
                           </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </Card>
 
-                  <Card className="order-1 lg:order-2 border-border bg-card p-0 overflow-hidden shadow-lg">
-                    <Accordion type="single" collapsible defaultValue="memo">
-                      <AccordionItem value="memo">
-                        <AccordionTrigger className="bg-background/90 px-6 py-4 text-left text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                          Foresight memo
-                        </AccordionTrigger>
-                        <AccordionContent className="px-6 pb-6">
-                          <div className="space-y-5">
-                            <div className="rounded-3xl border border-border bg-muted/50 p-4">
-                              <div className="text-sm font-semibold text-foreground">Narrative summary</div>
-                              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                                The memo below synthesizes your scenario with relevant historical matches and confidence scoring for analyst-ready review.
-                              </p>
+                          <div className="rounded-3xl border border-border bg-background p-5 mt-6">
+                            <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-3">
+                              Calibration Calibration: Scenario vs History
                             </div>
-
-                            <div className="rounded-3xl border border-border bg-background p-5">
-                              <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-4">
-                                Historical Precedent Timeline
+                            <div className="grid grid-cols-3 gap-2 text-xs border-b border-border pb-2 mb-2 font-mono-data text-muted-foreground uppercase tracking-wider">
+                              <div>Parameter</div>
+                              <div>Your Scenario</div>
+                              <div>Historical Match</div>
+                            </div>
+                            <div className="space-y-3.5 text-xs">
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="font-semibold text-foreground">Defense Shift</div>
+                                <div className="text-[var(--primary)] font-semibold">{parsePercentageFromScenario(input, "defense")}</div>
+                                <div className="text-muted-foreground truncate">{historicalMatches[0]?.defense_trend || "N/A"}</div>
                               </div>
-                              <div className="relative border-l border-border pl-6 ml-3 space-y-6">
-                                {historicalMatches.slice(0, 3).map((match, idx) => (
-                                  <div key={`${match.country}-${match.period}`} className="relative group">
-                                    <div className="absolute -left-[31px] top-1.5 h-3 w-3 rounded-full border-2 border-background" style={{ backgroundColor: ["var(--primary)", "var(--accent-cyan)", "var(--accent-violet)"][idx % 3] }} />
-                                    <div className="flex items-center justify-between text-xs font-mono-data text-muted-foreground uppercase tracking-wider">
-                                      <span>{match.period}</span>
-                                      <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-foreground font-semibold">
-                                        {(match.similarity * 100).toFixed(0)}% Similarity
-                                      </span>
-                                    </div>
-                                    <div className="mt-1 font-display text-base font-semibold text-foreground leading-snug">{match.country}</div>
-                                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                      Grounded baseline for emissions outputs and geopolitical shifts during this epoch.
-                                    </p>
-                                  </div>
-                                ))}
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="font-semibold text-foreground">Emissions / Energy</div>
+                                <div className="text-[var(--accent-cyan)] font-semibold">{parsePercentageFromScenario(input, "subsidy")}</div>
+                                <div className="text-muted-foreground truncate">{historicalMatches[0]?.emissions_trend || "N/A"}</div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="font-semibold text-foreground">Key Jurisdiction</div>
+                                <div className="text-foreground truncate">{getCountriesFromScenario(input)[0] || "Global"}</div>
+                                <div className="text-muted-foreground font-semibold truncate">{historicalMatches[0]?.country || "N/A"} ({historicalMatches[0]?.period || "N/A"})</div>
                               </div>
                             </div>
+                          </div>
+                        </div>
+                      )}
 
-                            <div className="grid gap-4">
-                              {memoSections.map((section) => (
-                                <Card key={section.title} className="relative group/section border-border bg-background p-4 shadow-sm">
-                                  <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
-                                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground font-mono-data">
-                                      {section.title}
-                                    </div>
-                                    <button 
-                                      onClick={() => handleSpeakSection(section.body)}
-                                      className={`p-1 rounded hover:bg-muted transition-colors cursor-pointer ${speakingSection === section.body ? "text-primary" : "text-muted-foreground opacity-0 group-hover/section:opacity-100"}`}
-                                      title={speakingSection === section.body ? "Stop reading" : "Read section aloud"}
-                                    >
-                                      <Volume2 className="h-3 w-3" />
-                                    </button>
+                      {activeTab === "timeline" && (
+                        <div className="space-y-5">
+                          <div className="rounded-3xl border border-border bg-background p-5">
+                            <div className="text-[10px] font-mono-data uppercase tracking-[0.22em] text-muted-foreground mb-4">
+                              Historical Precedent Timeline
+                            </div>
+                            <div className="relative border-l border-border pl-6 ml-3 space-y-6">
+                              {historicalMatches.slice(0, 3).map((match, idx) => (
+                                <div key={`${match.country}-${match.period}`} className="relative group">
+                                  <div className="absolute -left-[31px] top-1.5 h-3 w-3 rounded-full border-2 border-background" style={{ backgroundColor: ["var(--primary)", "var(--accent-cyan)", "var(--accent-violet)"][idx % 3] }} />
+                                  <div className="flex items-center justify-between text-xs font-mono-data text-muted-foreground uppercase tracking-wider">
+                                    <span>{match.period}</span>
+                                    <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-foreground font-semibold">
+                                      {(match.similarity * 100).toFixed(0)}% Similarity
+                                    </span>
                                   </div>
-                                  <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground">
-                                    {renderBodyWithCitations(section.body, historicalMatches)}
-                                  </div>
-                                </Card>
+                                  <div className="mt-1 font-display text-base font-semibold text-foreground leading-snug">{match.country}</div>
+                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    Grounded baseline for emissions outputs and geopolitical shifts during this epoch.
+                                  </p>
+                                </div>
                               ))}
                             </div>
+                          </div>
+                        </div>
+                      )}
 
-                            <div className="flex flex-col gap-2.5">
-                              {saving && (
-                                <div className="rounded-2xl border border-border bg-blue-50/50 p-4 text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  <span className="text-sm font-medium">Saving memo to drafts...</span>
-                                </div>
-                              )}
-                              {savedBriefId && !saving && (
-                                <div className="rounded-2xl border border-border bg-green-50/50 p-4 text-green-700 dark:text-green-300 flex items-center gap-2">
-                                  <Check className="h-4 w-4" />
-                                  <span className="text-sm font-medium font-mono-data text-xs">Saved to Past Drafts (ID: {savedBriefId.slice(0, 8)})</span>
-                                </div>
-                              )}
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button onClick={downloadBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
-                                  <Download className="h-4 w-4" /> Download (.txt)
-                                </Button>
-                                <Button onClick={downloadPdfBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
-                                  <Download className="h-4 w-4" /> Export (.pdf)
-                                </Button>
+                      {activeTab === "exports" && (
+                        <div className="space-y-5">
+                          <div className="rounded-3xl border border-border bg-muted/50 p-5">
+                            <div className="text-sm font-semibold text-foreground">Export Panel</div>
+                            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                              Extract your brief report as structured text, PDF format, or share the interactive parameters.
+                            </p>
+                          </div>
+
+                          <div className="flex flex-col gap-2.5">
+                            {saving && (
+                              <div className="rounded-2xl border border-border bg-blue-50/50 p-4 text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="text-sm font-medium">Saving memo to drafts...</span>
                               </div>
-                              <Button onClick={generateShareLink} variant="secondary" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
-                                <Share2 className="h-4 w-4" /> Copy Shareable Link
+                            )}
+                            {savedBriefId && !saving && (
+                              <div className="rounded-2xl border border-border bg-green-50/50 p-4 text-green-700 dark:text-green-300 flex items-center gap-2">
+                                <Check className="h-4 w-4" />
+                                <span className="text-sm font-medium font-mono-data text-xs">Saved to Past Drafts (ID: {savedBriefId.slice(0, 8)})</span>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button onClick={downloadBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
+                                <Download className="h-4 w-4" /> Download (.txt)
+                              </Button>
+                              <Button onClick={downloadPdfBrief} variant="outline" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm">
+                                <Download className="h-4 w-4" /> Export (.pdf)
                               </Button>
                             </div>
+                            <Button onClick={generateShareLink} variant="secondary" className="w-full gap-2 text-xs font-mono-data uppercase tracking-wider h-10 rounded-sm cursor-pointer">
+                              <Share2 className="h-4 w-4" /> Copy Shareable Link
+                            </Button>
                           </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
-                  </Card>
-                </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
               </motion.div>
             )}
 
