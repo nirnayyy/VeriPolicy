@@ -45,102 +45,102 @@
 :root {
   --radius: 0.5rem;
 
-  --background: #ffffff;       /* white */
-  --surface: #fff7f4;          /* warm off-white */
+  --background: #fdfcfb;       /* soft elegant off-white/linen */
+  --surface: #f7f1ed;          /* warm sand/cream paper */
   --card: #ffffff;
-  --card-foreground: #2b1d18;
+  --card-foreground: #221511;  /* deep chocolate-slate */
   --popover: #ffffff;
-  --popover-foreground: #2b1d18;
-  --foreground: #2b1d18;
+  --popover-foreground: #221511;
+  --foreground: #221511;
 
-  --primary: #E29578;          /* terracotta */
+  --primary: #c96f53;          /* richer, more polished terracotta */
   --primary-foreground: #ffffff;
-  --secondary: #FFDDD2;        /* blush */
-  --secondary-foreground: #2b1d18;
-  --muted: #FFDDD2;
-  --muted-foreground: #6b5147;
-  --accent: #83C5BE;           /* teal */
-  --accent-foreground: #1b2e2c;
-  --destructive: #b23a2a;
+  --secondary: #f3ded7;        /* muted, sophisticated blush */
+  --secondary-foreground: #221511;
+  --muted: #f3ded7;
+  --muted-foreground: #7a6257; /* readable warm earth grey */
+  --accent: #5fa6a0;           /* more polished, professional teal */
+  --accent-foreground: #0d1e1c;
+  --destructive: #ae3020;
   --destructive-foreground: #ffffff;
-  --border: #f1d7cd;
-  --input: #f1d7cd;
-  --ring: #E29578;
+  --border: #e8d2c9;           /* subtle warm border */
+  --input: #e8d2c9;
+  --ring: #c96f53;
 
   /* Aliased accent palette */
-  --accent-cyan: #83C5BE;      /* teal (primary accent) */
-  --accent-violet: #E29578;    /* terracotta */
-  --accent-green: #83C5BE;     /* teal */
-  --accent-amber: #FFDDD2;     /* blush */
+  --accent-cyan: #5fa6a0;      /* teal */
+  --accent-violet: #c96f53;    /* terracotta */
+  --accent-green: #709d8d;     /* professional sage */
+  --accent-amber: #e6c5bc;     /* soft terracotta accent */
 
-  --paper-tint: #FFDDD2;
-  --shadow-elegant: 0 1px 2px rgba(43,29,24,0.05), 0 8px 24px -12px rgba(226,149,120,0.22);
-  --shadow-soft: 0 1px 2px rgba(43,29,24,0.04), 0 4px 14px -8px rgba(43,29,24,0.10);
+  --paper-tint: #f3ded7;
+  --shadow-elegant: 0 2px 8px rgba(43,29,24,0.04), 0 12px 32px -8px rgba(201,111,83,0.14);
+  --shadow-soft: 0 1px 3px rgba(43,29,24,0.03), 0 6px 16px -8px rgba(43,29,24,0.08);
 }
 
 .dark {
-  --background: #1a0f0c;
-  --surface: #221612;
-  --card: #2b1c17;
-  --card-foreground: #f4dfc4;
-  --popover: #2b1c17;
-  --popover-foreground: #f4dfc4;
-  --foreground: #f4dfc4;
-  --primary: #efa3a0;
-  --primary-foreground: #1a0f0c;
-  --secondary: #3a2620;
-  --secondary-foreground: #f4dfc4;
-  --muted: #2b1c17;
-  --muted-foreground: #c4a489;
-  --accent: #8b597b;
-  --accent-foreground: #f4dfc4;
-  --border: #3a2620;
-  --input: #3a2620;
-  --ring: #efa3a0;
+  --background: #0d0806;       /* volcanic dark charcoal-chocolate */
+  --surface: #150d0a;          /* slightly lighter */
+  --card: #1b110e;             /* deep card background */
+  --card-foreground: #f7ebd8;  /* warm sand/cream */
+  --popover: #1b110e;
+  --popover-foreground: #f7ebd8;
+  --foreground: #f7ebd8;
+  --primary: #e58e8a;          /* sophisticated salmon rose */
+  --primary-foreground: #0d0806;
+  --secondary: #2c1b18;        /* deep warm mahogany */
+  --secondary-foreground: #f7ebd8;
+  --muted: #1b110e;
+  --muted-foreground: #bfa58f; /* readable silver-brown */
+  --accent: #a86c95;           /* richer muted amethyst/purple */
+  --accent-foreground: #f7ebd8;
+  --border: #2b1915;           /* rich dark border */
+  --input: #2b1915;
+  --ring: #e58e8a;
 
-  --accent-cyan: #efa3a0;
-  --accent-violet: #c5a3bb;
-  --accent-green: #a9b598;
-  --accent-amber: #e0a98e;
+  --accent-cyan: #e58e8a;
+  --accent-violet: #d8a2c7;
+  --accent-green: #b7c7a3;
+  --accent-amber: #ecc1ad;
 
-  --paper-tint: #2b1c17;
-  --shadow-elegant: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
-  --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 4px 14px -8px rgba(0,0,0,0.4);
+  --paper-tint: #1b110e;
+  --shadow-elegant: 0 1px 3px rgba(0,0,0,0.5), 0 12px 32px -8px rgba(0,0,0,0.7);
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.4), 0 6px 16px -8px rgba(0,0,0,0.5);
 }
 
 .forest {
   --radius: 0.5rem;
-  --background: #f1f5f2;       /* very soft pale green-gray */
-  --surface: #e4ebe6;          /* soft sage-tint surface */
+  --background: #f3f7f4;       /* clean soft mossy white */
+  --surface: #e2ede6;          /* soft sage-tint surface */
   --card: #ffffff;
-  --card-foreground: #14241b;
+  --card-foreground: #0d1a13;  /* rich forest black */
   --popover: #ffffff;
-  --popover-foreground: #14241b;
-  --foreground: #14241b;
+  --popover-foreground: #0d1a13;
+  --foreground: #0d1a13;
 
-  --primary: #1b4d3e;          /* deep forest green */
+  --primary: #123c30;          /* deeper British racing forest green */
   --primary-foreground: #ffffff;
-  --secondary: #d3ede0;        /* soft pale mint */
-  --secondary-foreground: #14241b;
-  --muted: #d3ede0;
-  --muted-foreground: #2d6a4f;
-  --accent: #52b788;           /* vibrant green accent */
-  --accent-foreground: #14241b;
-  --destructive: #b23a2a;
+  --secondary: #cdeae0;        /* softer pale mint */
+  --secondary-foreground: #0d1a13;
+  --muted: #cdeae0;
+  --muted-foreground: #20563d;
+  --accent: #3ea677;           /* professional emerald */
+  --accent-foreground: #0d1a13;
+  --destructive: #ae3020;
   --destructive-foreground: #ffffff;
-  --border: #c7ebd8;
-  --input: #c7ebd8;
-  --ring: #1b4d3e;
+  --border: #c0e6d2;           /* cleaner mint-sage border */
+  --input: #c0e6d2;
+  --ring: #123c30;
 
   /* Aliased accent palette */
-  --accent-cyan: #52b788;      /* emerald accent */
-  --accent-violet: #1b4d3e;    /* deep forest */
-  --accent-green: #2d6a4f;     /* sage green */
-  --accent-amber: #d3ede0;     /* pale mint */
+  --accent-cyan: #3ea677;      /* emerald accent */
+  --accent-violet: #123c30;    /* deep forest */
+  --accent-green: #20563d;     /* sage green */
+  --accent-amber: #cdeae0;     /* pale mint */
 
-  --paper-tint: #d3ede0;
-  --shadow-elegant: 0 1px 2px rgba(20,36,27,0.05), 0 8px 24px -12px rgba(27,77,62,0.22);
-  --shadow-soft: 0 1px 2px rgba(20,36,27,0.04), 0 4px 14px -8px rgba(20,36,27,0.10);
+  --paper-tint: #cdeae0;
+  --shadow-elegant: 0 2px 8px rgba(13,26,19,0.04), 0 12px 32px -8px rgba(18,60,48,0.14);
+  --shadow-soft: 0 1px 3px rgba(13,26,19,0.03), 0 6px 16px -8px rgba(13,26,19,0.08);
 }
 
 @layer base {
