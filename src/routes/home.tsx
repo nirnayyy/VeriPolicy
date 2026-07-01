@@ -23,6 +23,7 @@ import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-provider";
+import { CrowdCanvas } from "@/components/CrowdCanvas";
 import { useCountUp, useInView } from "@/hooks/use-animations";
 import { fetchBriefs, fetchActivity } from "@/lib/supabase/dashboard";
 import { getPolicies } from "@/services/policyService";
@@ -192,6 +193,7 @@ function QuickActionCard({
   icon: Icon,
   to,
   accentColor,
+  imageUrl,
   delay = 0,
 }: {
   title: string;
@@ -199,30 +201,44 @@ function QuickActionCard({
   icon: React.ElementType;
   to: string;
   accentColor: string;
+  imageUrl?: string;
   delay?: number;
 }) {
   return (
     <Reveal delay={delay}>
       <Link to={to}>
-        <div className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:shadow-[var(--shadow-elegant)] hover:-translate-y-1 cursor-pointer">
+        <div className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:shadow-[var(--shadow-elegant)] hover:-translate-y-1 cursor-pointer flex flex-col">
           {/* Hover gradient reveal */}
           <div
-            className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-10"
             style={{ background: `linear-gradient(135deg, color-mix(in oklab, ${accentColor} 6%, transparent), transparent)` }}
           />
 
-          <div className="relative">
-            <div
-              className="mb-4 grid h-12 w-12 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110"
-              style={{ background: `color-mix(in oklab, ${accentColor} 12%, transparent)`, color: accentColor }}
-            >
-              <Icon className="h-6 w-6" />
+          {imageUrl && (
+            <div className="relative h-36 w-full overflow-hidden border-b border-border">
+              <img
+                src={imageUrl}
+                alt={title}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent opacity-75" />
+            </div>
+          )}
+
+          <div className="relative p-6 flex-1 flex flex-col justify-between z-20">
+            <div>
+              <div
+                className="mb-4 grid h-12 w-12 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110"
+                style={{ background: `color-mix(in oklab, ${accentColor} 12%, transparent)`, color: accentColor }}
+              >
+                <Icon className="h-6 w-6" />
+              </div>
+
+              <h3 className="font-display text-xl font-semibold text-foreground">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
             </div>
 
-            <h3 className="font-display text-xl font-semibold text-foreground">{title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
-
-            <div className="mt-4 flex items-center gap-1.5 font-mono-data text-[11px] uppercase tracking-wider transition-colors group-hover:text-foreground" style={{ color: accentColor }}>
+            <div className="mt-5 flex items-center gap-1.5 font-mono-data text-[11px] uppercase tracking-wider transition-colors group-hover:text-foreground" style={{ color: accentColor }}>
               Open <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </div>
           </div>
@@ -418,6 +434,7 @@ function IntelligenceDashboard() {
                   icon={Zap}
                   to="/simulator"
                   accentColor="var(--primary)"
+                  imageUrl="/images/scenario-simulator.png"
                   delay={0}
                 />
                 <QuickActionCard
@@ -426,6 +443,7 @@ function IntelligenceDashboard() {
                   icon={Radar}
                   to="/tracker"
                   accentColor="var(--accent-cyan)"
+                  imageUrl="/images/policy-tracker.png"
                   delay={0.06}
                 />
                 <QuickActionCard
@@ -434,6 +452,7 @@ function IntelligenceDashboard() {
                   icon={BarChart3}
                   to="/comparison"
                   accentColor="var(--accent)"
+                  imageUrl="/images/data-comparison.png"
                   delay={0.12}
                 />
                 <QuickActionCard
@@ -442,6 +461,7 @@ function IntelligenceDashboard() {
                   icon={ShieldCheck}
                   to="/profile"
                   accentColor="var(--primary)"
+                  imageUrl="/images/analyst-dossier.png"
                   delay={0.18}
                 />
               </div>
@@ -759,6 +779,7 @@ function MarketingPage() {
                 badge: "Scenario Simulator",
                 icon: FileText,
                 accent: "var(--primary)",
+                imageUrl: "/images/scenario-simulator.png",
                 title: "Generate analyst-grade foresight memos from policy scenarios.",
                 lines: [
                   "Vector search across historical analogues",
@@ -771,6 +792,7 @@ function MarketingPage() {
                 badge: "Policy Tracker",
                 icon: Globe2,
                 accent: "var(--accent-cyan)",
+                imageUrl: "/images/policy-tracker.png",
                 title: "Real-time monitoring of defence and climate policy developments.",
                 lines: [
                   "Live policy feed across 47 jurisdictions",
@@ -781,24 +803,35 @@ function MarketingPage() {
               },
             ].map((d, i) => (
               <Reveal key={d.badge} delay={i * 0.08}>
-                <div className="group relative h-full overflow-hidden rounded-sm border border-border bg-card p-7 transition-shadow hover:shadow-[var(--shadow-elegant)]">
-                  <div className="absolute right-0 top-0 h-20 w-20 -translate-y-8 translate-x-8 rotate-45 border border-border opacity-40" />
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-9 w-9 place-items-center rounded-sm"
-                      style={{ background: `color-mix(in oklab, ${d.accent} 18%, transparent)`, color: d.accent }}>
-                      <d.icon className="h-4 w-4" />
-                    </span>
-                    <span className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{d.badge}</span>
+                <div className="group relative h-full overflow-hidden rounded-sm border border-border bg-card transition-shadow hover:shadow-[var(--shadow-elegant)] flex flex-col">
+                  {d.imageUrl && (
+                    <div className="relative h-44 w-full overflow-hidden border-b border-border">
+                      <img
+                        src={d.imageUrl}
+                        alt={d.badge}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent opacity-60" />
+                    </div>
+                  )}
+                  <div className="p-7 flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 place-items-center rounded-sm"
+                        style={{ background: `color-mix(in oklab, ${d.accent} 18%, transparent)`, color: d.accent }}>
+                        <d.icon className="h-4 w-4" />
+                      </span>
+                      <span className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{d.badge}</span>
+                    </div>
+                    <h3 className="mt-5 font-display text-2xl font-medium leading-snug text-foreground">{d.title}</h3>
+                    <ul className="mt-5 space-y-2 border-t border-border pt-4">
+                      {d.lines.map((l) => (
+                        <li key={l} className="flex items-start gap-3 text-sm text-muted-foreground">
+                          <span className="mt-2 inline-block h-1 w-3" style={{ background: d.accent }} />
+                          {l}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <h3 className="mt-5 font-display text-2xl font-medium leading-snug text-foreground">{d.title}</h3>
-                  <ul className="mt-5 space-y-2 border-t border-border pt-4">
-                    {d.lines.map((l) => (
-                      <li key={l} className="flex items-start gap-3 text-sm text-muted-foreground">
-                        <span className="mt-2 inline-block h-1 w-3" style={{ background: d.accent }} />
-                        {l}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               </Reveal>
             ))}
@@ -844,8 +877,13 @@ function MarketingPage() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border bg-[var(--surface)]">
-      <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+    <footer className="relative border-t border-border bg-[var(--surface)] overflow-hidden">
+      {/* Background Crowd Canvas */}
+      <div className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-10 select-none">
+        <CrowdCanvas src="/images/peeps/all-peeps.png" rows={15} cols={7} />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-7xl px-5 py-12 sm:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
