@@ -617,6 +617,106 @@ function MarketingPage() {
 
       <InteractiveHero onScrollProgress={(progress) => setShowNavbar(progress >= 0.85)} />
 
+      {/* ── OLD HERO SECTION (Placed below the interactive scroll hero) ── */}
+      <section className="relative overflow-hidden border-t border-border bg-background">
+        <GeometryBackdrop />
+        <div className="pointer-events-none absolute inset-0">
+          <div className="float-slow absolute left-[6%] top-[18%] h-24 w-24 rounded-full border border-[var(--primary)]/30" style={{ ['--r' as any]: '0deg' }} />
+          <div className="float-slow absolute right-[8%] top-[12%] h-16 w-16 rotate-45 border border-[var(--accent)]/60" style={{ ['--r' as any]: '45deg', animationDelay: '-3s' }} />
+          <div className="float-slow absolute left-[14%] bottom-[14%] h-2 w-2 rounded-full bg-[var(--primary)]" />
+          <svg className="absolute right-[14%] bottom-[20%] h-32 w-32 text-[var(--accent-cyan)] opacity-25" viewBox="0 0 100 100" aria-hidden>
+            <polygon points="50,4 96,28 96,72 50,96 4,72 4,28" fill="none" stroke="currentColor" strokeWidth="0.6" />
+            <polygon points="50,18 82,34 82,66 50,82 18,66 18,34" fill="none" stroke="currentColor" strokeWidth="0.6" />
+            <polygon points="50,32 68,42 68,58 50,68 32,58 32,42" fill="none" stroke="currentColor" strokeWidth="0.6" />
+          </svg>
+        </div>
+
+        <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-28 sm:pt-28 sm:pb-36">
+          <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <div className="inline-flex items-center gap-3 rounded-full border border-border bg-card/60 px-4 py-1.5 font-mono-data text-[10px] uppercase tracking-[0.28em] text-muted-foreground backdrop-blur">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                Vol. VII · Bulletin 2026 / 06
+              </div>
+
+              <h1 className="mt-6 font-display text-5xl font-medium leading-[1.02] tracking-tight text-foreground sm:text-6xl md:text-7xl">
+                From raw record to
+                <br />
+                <span className="font-serif-italic" style={{ color: "var(--primary)" }}>decision-ready</span>{" "}
+                intelligence.
+              </h1>
+
+              <p className="mt-7 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                VeriPolicy is the in-house foresight desk for analysts working at the intersection of defence, climate, and strategic technology. Submit a scenario; receive a referenced, referenced brief in under two seconds.
+              </p>
+
+              <div className="mt-9 flex flex-wrap items-center gap-3">
+                <Link to="/signup">
+                  <Button size="lg" className="h-11 gap-2 rounded-sm bg-[var(--primary)] px-6 font-mono-data text-[11px] uppercase tracking-[0.2em] text-[var(--primary-foreground)] shadow-[var(--shadow-elegant)] hover:bg-[color-mix(in_oklab,var(--primary)_88%,black)]">
+                    Get Started <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button size="lg" variant="outline" className="h-11 rounded-sm border-[var(--primary)] px-6 font-mono-data text-[11px] uppercase tracking-[0.2em] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)]">
+                    Sign In
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 font-mono-data text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5 text-[var(--primary)]" /> SIPRI-grounded</div>
+                <div className="flex items-center gap-2"><Globe2 className="h-3.5 w-3.5 text-[var(--primary)]" /> 47 jurisdictions</div>
+                <div className="flex items-center gap-2"><Database className="h-3.5 w-3.5 text-[var(--primary)]" /> 2.1M records indexed</div>
+              </div>
+            </div>
+
+            {/* Brief specimen card */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="relative"
+            >
+              <div className="absolute -inset-4 -z-10 rounded-sm bg-[var(--accent)]/20 blur-2xl" />
+              <div className="relative overflow-hidden rounded-sm border border-border bg-card shadow-[var(--shadow-elegant)]">
+                <div className="flex items-center justify-between border-b border-border bg-[var(--surface)] px-5 py-3">
+                  <div className="flex items-center gap-2 font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5" />
+                    Foresight Memo · Specimen
+                  </div>
+                  <span className="font-mono-data text-[10px] text-muted-foreground">VP-2026-0617-A</span>
+                </div>
+                <div className="px-6 pt-6">
+                  <div className="font-mono-data text-[10px] uppercase tracking-[0.28em] text-[var(--primary)]">Subject</div>
+                  <h3 className="mt-1 font-display text-2xl font-medium leading-tight text-foreground">
+                    Indo-Pacific defence procurement and the renewables-subsidy reallocation question.
+                  </h3>
+                </div>
+                <div className="px-6 pb-2 pt-4">
+                  <Ornament label="Scenario Input" />
+                  <div className="rounded-sm border border-border bg-[var(--surface)] px-4 py-3 font-mono-data text-xs leading-relaxed text-foreground/80">
+                    <span style={{ color: "var(--primary)" }}>→ </span><Typewriter />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-px bg-border">
+                  {[
+                    { k: "Confidence", v: "0.82", note: "n = 14 analogues" },
+                    { k: "Time horizon", v: "0–24 mo", note: "Q3'26 → Q3'28" },
+                    { k: "Primary domain", v: "Defence ×", note: "Energy policy" },
+                    { k: "Generated in", v: "1.4 s", note: "Llama 3.3 / Groq" },
+                  ].map((m) => (
+                    <div key={m.k} className="bg-card px-5 py-4">
+                      <div className="font-mono-data text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{m.k}</div>
+                      <div className="mt-1 font-display text-xl text-foreground">{m.v}</div>
+                      <div className="font-mono-data text-[10px] text-muted-foreground">{m.note}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ░░ MANDATE ░░ */}
       <section className="border-t border-border bg-[var(--surface)] py-24">
         <div className="mx-auto max-w-6xl px-6">
