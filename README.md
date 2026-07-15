@@ -1,191 +1,146 @@
-# VeriPolicy
+# 🏛️ VeriPolicy
 
-AI-powered policy intelligence platform for policy tracking, geopolitical scenario simulation, and impact analysis.
+> **AI-Powered Geopolitical Scenario Simulation & Policy Tracking Platform**  
+> VeriPolicy enables researchers, analysts, and organizations to model the downstream impacts of policy decisions and global events through Retrieval-Augmented Generation (RAG) and historical analogies.
 
-## Overview
-
-VeriPolicy helps users understand how policy decisions, geopolitical events, defense spending changes, climate initiatives, and economic shifts may affect countries, industries, and global systems.
-
-The platform combines:
-
-* Real-time policy monitoring
-* AI-generated impact briefs
-* Historical analogy retrieval
-* Scenario simulation and foresight analysis
-* Data-driven policy intelligence
+<p align="center">
+  <img src="https://img.shields.io/badge/Stack-Next.js%20%7C%20FastAPI%20%7C%20Supabase-10b981?style=flat-square" alt="Tech Stack">
+  <img src="https://img.shields.io/badge/AI-OpenAI%20%7C%20Embeddings-blue?style=flat-square" alt="AI Features">
+  <img src="https://img.shields.io/badge/License-MIT-black?style=flat-square" alt="License">
+</p>
 
 ---
 
-## Key Features
+## 🌍 Overview
 
-### Scenario Simulator
+In a volatile global landscape, policy makers and businesses struggle to anticipate how geopolitical actions shift supply chains, defense postures, and economic balances. 
 
-Generate AI-powered foresight memos for hypothetical scenarios.
+VeriPolicy resolves this complexity by compiling a dynamic feed of real-time policy events and using **embeddings** to retrieve contextually similar historical events. It then executes large-language models (LLMs) to synthesize targeted **foresight memos** detailing projected outcomes.
 
-Examples:
-
-* Germany cuts defense spending by 30%
-* China restricts rare earth exports
-* Global carbon tax implementation
-* Major military spending increases
-
-Workflow:
-
-1. User submits a scenario
-2. Historical analogies are retrieved using embeddings
-3. Relevant historical events are ranked by similarity
-4. AI generates a structured foresight memo
-5. Results are stored for future analysis
-
----
-
-### Policy Tracker
-
-Tracks policy-related developments from live news sources.
-
-Pipeline:
-
-NewsData API → Policy Extraction → Supabase → AI Analysis → Impact Brief Generation
-
-Capabilities:
-
-* Automated policy ingestion
-* Policy categorization
-* AI-generated impact briefs
-* Searchable policy feed
-* Daily policy monitoring
-
----
-
-## Historical Analogy Engine
-
-VeriPolicy uses retrieval-augmented generation (RAG) to ground AI reasoning in historical precedent.
-
-Workflow:
-
-Historical Dataset → Embeddings → Vector Search → Similar Events → AI Analysis
-
-Datasets Used:
-
-* OWID CO₂ Dataset
-* SIPRI Military Expenditure Dataset
-
-Embedding Model:
-
-* Xenova/all-MiniLM-L6-v2
-
----
-
-## Tech Stack
-
-### Frontend
-
-* React
-* TypeScript
-* Vite
-* TanStack Router
-* Tailwind CSS
-
-### Backend & Database
-
-* Supabase
-* PostgreSQL
-* Row Level Security (RLS)
-
-### AI & Analytics
-
-* Groq API
-* Llama Models
-* Vector Embeddings
-* Retrieval-Augmented Generation (RAG)
-
-### External APIs
-
-* NewsData API
-
----
-
-## Project Structure
-
-```text
-src/
-├── components/
-├── routes/
-├── services/
-├── lib/
-├── hooks/
-├── contexts/
-
-supabase/
-├── migrations/
-├── seeds/
-
-Dataset/
-├── owid-co2-data.csv
-├── SIPRI-Milex-data-1949-2025_v1.2.xlsx
 ```
-
-## Environment Variables
-
-Create a `.env` file:
-
-```env
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-NEWSDATA_API_KEY=
-GROQ_API_KEY=
-```
-
-Do not commit real API keys.
-
----
-
-## Local Development
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Run development server:
-
-```bash
-npm run dev
-```
-
-Build for production:
-
-```bash
-npm run build
+                  ┌──────────────────────┐
+                  │ Global News Feed API │
+                  └──────────┬───────────┘
+                             ▼
+                  ┌──────────────────────┐
+                  │   News Ingestion     │
+                  │   & Extraction       │
+                  └──────────┬───────────┘
+                             ▼
+┌──────────────┐  ┌──────────────────────┐
+│  Historical  │  │   Supabase Database  │
+│  Analogies   ├─►│                      │
+│ (Embeddings) │  │  Geopolitical State  │
+└──────────────┘  └──────────┬───────────┘
+                             ▼
+                  ┌──────────────────────┐
+                  │  FastAPI Analytics   │
+                  │       (RAG)          │
+                  └──────────┬───────────┘
+                             ▼
+                  ┌──────────────────────┐
+                  │  Next.js Dashboard   │
+                  └──────────────────────┘
 ```
 
 ---
 
-## Deployment
+## ⚡ Core Engines
 
-The application is deployed using:
+### 1. Geopolitical Scenario Simulator
+Test hypothetical scenarios (e.g., *"Germany cuts defense spending by 30%"*, *"Major restrictions on rare earth exports"*) and observe simulated geopolitical friction.
+* **Analogy Search:** Searches database vector space using cosine similarity to retrieve matching historical events.
+* **Foresight Generation:** Compiles analogical events into a rich prompt context to output structured policy briefing memos.
 
-* GitHub
-* Vercel
-* Supabase
-
-Environment variables are configured through the Vercel dashboard.
-
----
-
-## Future Enhancements
-
-* Advanced forecasting models
-* Scenario comparison engine
-* Interactive policy dashboards
-* Geopolitical risk scoring
-* Regional policy heatmaps
+### 2. Live Policy Tracker
+Maintains an ingestion pipeline checking news feeds for policy changes.
+* **Ingestion:** Periodic fetches from news aggregators.
+* **Classification:** Categorizes stories into defense, trade, energy, or monetary policies.
+* **Briefing:** Generates concise impact notes automatically stored in Supabase.
 
 ---
 
-## Author
+## 🛠️ Repository & Architecture Structure
 
-Nirnay Singh
+```
+├── client/                 # Next.js frontend application
+│   ├── src/
+│   │   ├── components/     # UI elements (charts, feeds, panels)
+│   │   └── pages/          # Main dashboard views
+│   └── package.json
+├── server/                 # FastAPI backend analytics engine
+│   ├── app/
+│   │   ├── main.py         # App entrypoint
+│   │   ├── routes/         # Simulation and tracking endpoints
+│   │   └── core/           # Embeddings extraction & prompt pipelines
+│   └── requirements.txt
+└── README.md
+```
 
-Built as an AI-powered policy intelligence and foresight platform combining real-time policy monitoring, retrieval systems, and generative AI.
+---
+
+## ⚙️ Local Development Setup
+
+### Backend (FastAPI Server)
+
+1. **Clone & Navigate:**
+   ```bash
+   cd server
+   ```
+
+2. **Virtual Environment & Dependencies:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. **Configure Environment Variables (`.env`):**
+   ```env
+   OPENAI_API_KEY=your_openai_api_key
+   SUPABASE_URL=your_supabase_project_url
+   SUPABASE_KEY=your_supabase_service_role_key
+   NEWS_API_KEY=your_newsdata_key
+   ```
+
+4. **Launch Server:**
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+   The interactive API docs will be active at `http://localhost:8000/docs`.
+
+### Frontend (Next.js Client)
+
+1. **Navigate & Install:**
+   ```bash
+   cd client
+   npm install
+   ```
+
+2. **Configure Environment Variables (`.env.local`):**
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+3. **Run Dev Environment:**
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:3000` to interact with the platform.
+
+---
+
+## 🧭 Project Status & Roadmap
+
+- [x] Ingestion pipeline with automated classification
+- [x] Cosine-similarity historical analogy retriever
+- [x] Next.js interactive scenario modeler
+- [ ] Multi-agent simulation (competing actor models)
+- [ ] Exportable PDF intelligence briefs
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
